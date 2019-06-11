@@ -1,0 +1,463 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.shengxian.mapper.UserMapper">
+
+    <!--查询版本号-->
+    <select id="version" resultType="String">
+        select version from version where type=1
+    </select>
+
+    <!--协议书-->
+    <select id="agreement" resultType="HashMap">
+        select noticeContent  from shengxian_notice where distinguish=4
+    </select>
+
+    <!--通过token查询id-->
+    <select id="userIdByToken" resultType="Integer">
+        select id from user where is_del = 0 and token =#{token}
+    </select>
+
+    <!--查询token查询是否被禁用（此接口只在拦截器使用）-->
+    <select id="userByToken" resultType="HashMap">
+        select is_disable from user where is_del=0 and  token=#{token}
+    </select>
+
+    <!--查询手机号是否存在了-->
+    <select id="phoneIfExistence" resultType="Integer">
+        select id from user where is_del=0 and  phone=#{phone}
+    </select>
+
+    <!--用户注册-->
+    <insert id="register">
+        insert into user(phone ,password,token)values(#{phone} ,#{password} ,#{token})
+    </insert>
+
+    <!--修改密码-->
+    <update id="updatePassword">
+        update user set password =#{password} where id=#{id}
+    </update>
+
+    <!--修改手机设备-->
+    <update id="updateEquipment">
+        update user set status = 0 , model =#{model} ,system =#{system} ,version =#{version} ,platform =#{platform} ,SDKVersion =#{SDKVersion}
+        where is_del=0 and  token =#{token}
+    </update>
+
+    <!--app中判断在是否有退出登录过-->
+    <select id="appIsLogin" resultType="Integer">
+        select id from user where is_del=0 and  status =0 and  phone =#{phone}  and model =#{model}
+        and system =#{system} and version =#{version} and platform =#{platform}  and SDKVersion =#{SDKVersion}
+    </select>
+
+    <!--在微信公众号是否有退出登录过-->
+    <select id="seleteUserStatus" resultType="Integer">
+        select status from user where is_del=0 and  phone =#{phone}
+    </select>
+
+    <!--在微信公众号退出登录修改状态-->
+    <update id="updateUserStatus">
+        update user set status=1 where token=#{token}
+    </update>
+
+    <!--通过手机号查询用户信息-->
+    <select id="selectUser" resultType="HashMap">
+        select u.id, u.password ,u.token,u.power,u.is_disable from user u where u.is_del=0 and  u.phone=#{phone}
+    </select>
+
+    <!--通过id修改token-->
+    <update id="udateUserToken">
+        update user set token =#{token}  where id=#{id}
+    </update>
+
+    <!--查询店铺状态-->
+    <select id="findBusinessState" resultType="HashMap">
+        select b.is_disable,b.source,DATEDIFF(b.duration,NOW())duration from shengxian_business b
+        where b.is_del=0 and b.id=#{id}
+    </select>
+
+    <!--店铺有活动，首次切换弹出活动窗口，关闭下次不用弹出-->
+    <select id="activityIsRead" resultType="HashMap">
+        select c.`full`,c.reduce,startTime ,endTime  from shengxian_coupon c
+        inner join shengxian_business  b on b.id=c.business_id and b.source=0 and b.is_disable=0 and b.is_del=0 and DATEDIFF(b.duration,NOW()) &gt; 0
+        where type=1 and state=0 and  c.business_id =(select business_id from shengxian_binding  where source=0 and id= #{binding_id})
+        and c.endTime &gt;= CURDATE() and c.startTime &lt;= CURDATE() order by c.full asc
+    </select>
+
+    <!--关闭弹出活动窗口-->
+    <update id="updateCouponState">
+        update shengxian_coupon set state=1 where business_id=#{business_id} and type=1 and state=0
+    </update>
+
+    <!--首页轮播图-->
+    <select id="broadcastpicture" resultType="HashMap">
+        select figure from shengxian_broadcastpicture where distinguish = '客户端' order by sort asc
+    </select>
+
+    <!--系统公告-->
+    <select id="systemtBulletin" resultType="HashMap">
+        select noticeContent  from shengxian_notice  where distinguish =2
+    </select>
+
+    <!--用户最后登录的商家-->
+    <select id="userLastLoginBusiness" resultType="HashMap">
+        select b.id, b.store_name , ifnull( bd.starting_price,0)starting_price ,b.address ,b.img,
+        (select integar_num from shengxian_binding_integra where binding_id  = bd.id)integar
+        from shengxian_binding bd
+        inner join shengxian_business b on b.id=bd.business_id and b.source=0 and b.is_disable=0 and DATEDIFF(b.duration,NOW()) &gt;= 0
+        where b.is_del=0 and bd.is_del=0 and bd.source=0 and bd.id = #{binding_id}
+    </select>
+
+    <!--默认店铺-->
+    <select id="acquiesceBusiness" resultType="HashMap">
+        select b.id, b.store_name ,b.address,b.img
+        from shengxian_business b
+        where b.is_del=0  and b.source = 0 and b.is_disable=0  and b.id = 17
+    </select>
+
+    <!--是否有活动-->
+    <select id="ifExistActivity" resultType="Integer">
+        select ifnull(ifnull(ifnull((select id from shengxian_full_reduction
+        where is_del = 0 and  endTime &gt;= CURDATE() and startTime &lt;= CURDATE()  and business_id=#{bid} limit 1 ),
+        (select id from shengxian_full_bestow where business_id=#{bid} limit 1 )),
+        (select id from shengxian_restriction_goods where business_id =#{bid} limit 1)),0)activity
+    </select>
+
+    <!--商家的手机号或id是否存在-->
+    <select id="phoneOrBusiness_idIfExist" resultType="Integer">
+        select id from shengxian_business where is_del=0
+        <if test="phone != null and phone != ''">
+            and phone =#{phone}
+        </if>
+        <if test="business_id != null">
+            and id =#{business_id}
+        </if>
+    </select>
+
+    <!--通过注册ID和商家ID查询是否有提交过申请在待审核中-->
+    <select id="businessExamineUser" resultType="Integer">
+        select id from shengxian_business_examine_user where state = 0 and  user_id=#{user_id} and business_id =#{business_id}
+    </select>
+
+    <!--查询注册id和商家id是否绑定过-->
+    <select id="useridAndbusinessidIfBinding" resultType="Integer">
+        select id from shengxian_binding where is_del=0 and user_id=#{user_id} and business_id =#{business_id}
+    </select>
+
+    <!--添加申请绑定商家记录-->
+    <insert id="addApplyBindingBuseinss">
+        insert into shengxian_business_examine_user(user_id ,business_id ,applyTime)values(#{uid} ,#{bid} ,#{applyTime})
+    </insert>
+
+    <!--用户绑定的商家列表总数-->
+    <select id="userBindingBusinessCount" resultType="Integer">
+        select count(bd.id)
+        from shengxian_binding bd
+        inner join shengxian_business b on b.id=bd.business_id
+        where b.is_del=0 and bd.is_del=0 and bd.user_id =#{id} and bd.source = 0
+    </select>
+
+    <!--用户绑定的商家列表-->
+    <select id="userBindingBusiness" resultType="HashMap">
+        select b.id,bd.id as binding_id, b.store_name,ifnull( bd.starting_price,0)starting_price,b.img,
+        (select integar_num from shengxian_binding_integra where binding_id=bd.id)integar,b.address
+        from shengxian_binding bd
+        inner join shengxian_business b on b.id=bd.business_id
+        where b.is_del=0 and bd.is_del=0 and bd.user_id= #{id} and bd.source = 0
+        limit #{startIndex} ,#{pageSize}
+    </select>
+
+    <!--通过绑定id查询店铺id-->
+    <select id="busienss_id" resultType="Integer">
+        select business_id from shengxian_binding where is_del=0 and id = #{id}
+    </select>
+
+    <!--通过绑定id查询店铺id和会员方案-->
+    <select id="bidAndSchemeid" resultType="HashMap">
+        select business_id ,scheme_id from shengxian_binding where is_del=0 and id=#{id}
+    </select>
+
+    <!--切换商家时修改最后登录的绑定id-->
+    <update id="updateUserBDId">
+        update user set bd_id=#{binding_id} where is_del=0 and token=#{token}
+    </update>
+
+    <!--通过token查询用户绑定id-->
+    <select id="userBDIdByToken" resultType="Integer">
+        select u.bd_id from user u,shengxian_binding bd ,shengxian_business b
+        where bd.id = u.bd_id and u.is_del = 0 and bd.is_del=0 and bd.business_id = b.id and b.is_del = 0 and bd.user_id = u.id
+        and bd.source=0 and  b.source = 0 and  u.token = #{token}
+    </select>
+
+    <!--通过token查询用户绑定的店铺id-->
+    <select id="userBDBusiness_id" resultType="Integer">
+        select business_id from shengxian_binding
+        where is_del=0 and source = 0 and id =(select bd_id from user where is_del= 0 and  token =#{token})
+    </select>
+
+    <!--用户收藏的产品总数-->
+    <select id="userCollectionGoodsCount" resultType="Integer">
+        select  count(gc.id)
+        from shengxian_goods_collection gc
+        inner join shengxian_goods g on g.id=gc.goods_id and g.is_del =0 and g.status = 2
+        where gc.binding_id =#{bd_id} and g.business_id = #{business_id}
+        and gc.goods_id not in (select goods_id from shengxian_goods_shielding where binding_id = #{bd_id} )
+    </select>
+
+    <!--用户收藏的产品-->
+    <select id="userCollectionGoods" resultType="HashMap">
+        select gc.id, gc.goods_id, g.name ,g.units,g.spec,
+        IFNULL((select gs.price from shengxian_goods_scheme gs where g.id=gs.goods_id and gs.scheme_id =
+        (select scheme_id from shengxian_binding where is_del = 0 and id = #{bd_id} ) ),0)price,
+        (select img from shengxian_goods_img where goods_id = gc.goods_id order by id asc limit 1)img
+        from shengxian_goods_collection gc
+        inner join shengxian_goods g on g.id = gc.goods_id and g.is_del = 0 and g.status = 2
+        where gc.binding_id = #{bd_id} and g.business_id = #{business_id}
+        and gc.goods_id not in (select goods_id from shengxian_goods_shielding where binding_id = #{bd_id} )
+        limit #{startIndex} ,#{pageSize}
+    </select>
+
+
+    <!--通过id查询产品详情-->
+    <select id="goodsDetali" resultType="HashMap">
+          select g.id , g.business_id ,g.name , g.spec , g.units , g.goods_detail,
+          if( -1 = #{bd_id} ,g.temporary_price , IFNULL((select gs.price from shengxian_goods_scheme gs where g.id = gs.goods_id and gs.scheme_id =
+          (select scheme_id from shengxian_binding where is_del = 0 and id= #{bd_id} ) ),0)) price
+          from shengxian_goods g where is_del= 0 and g.status = 2 and  id = #{goods_id}
+    </select>
+
+    <!--通过产品ID和绑定客户ID查询产品是否收藏-->
+    <select id="selectGoodsIsCollection" resultType="Integer">
+        select id from shengxian_goods_collection
+        where goods_id = #{goods_id} and binding_id = #{binding_id}
+    </select>
+
+    <!--通过id查询产品图片-->
+    <select id="goodsImg" resultType="HashMap">
+        select img from shengxian_goods_img where goods_id=#{goods_id} order by id asc
+    </select>
+
+    <!--判断当前店铺是否有这件产品-->
+    <select id="findIdByGoodsIdAndBusinessId" resultType="Integer">
+        select id from shengxian_goods where is_del = 0 and  id = #{id} and business_id = #{business_id};
+    </select>
+
+    <!--添加收藏-->
+    <insert id="addCollection" keyProperty="id" useGeneratedKeys="true">
+        insert into shengxian_goods_collection(binding_id ,goods_id ,collection_time)
+        values(#{binding_id} ,#{goods_id} ,#{time})
+    </insert>
+
+    <!--取消收藏-->
+    <delete id="delectCollection">
+        delete from shengxian_goods_collection where id=#{id}
+    </delete>
+
+    <!--查询店铺类别-->
+    <select id="businessCategory" resultType="HashMap">
+        select id ,name from shengxian_goods_category
+        where  business_id = #{business_id}
+        <if test="level == null">
+            and level != 0
+        </if>
+        <if test="level != null">
+            and level = #{level}
+        </if>
+        order by status desc
+    </select>
+
+    <!--判断是大类别还是小类别-->
+    <select id="largeClassOrSmalClass" resultType="Integer">
+        select `level` from shengxian_goods_category  where id=#{id}
+    </select>
+
+    <!--店铺类别下的产品总数-->
+    <select id="businessGoodsCount" resultType="Integer">
+        select  count(g.id)
+        from shengxian_goods g
+        inner join shengxian_goods_category gc on gc.id=g.category_id
+        where g.is_del = 0 and g.status = 2
+        and g.business_id = #{business_id}
+        <if test="binding_id != null and binding_id != -1">
+            and g.id not in (select goods_id from shengxian_goods_shielding where binding_id = #{binding_id} )
+        </if>
+        <if test="category_id != null">
+            and g.category_id = #{category_id}
+        </if>
+        <if test="name != null and name != ''">
+            and g.name LIKE CONCAT('%',#{name},'%')
+        </if>
+        <if test="level != null">
+            and gc.level =#{level}
+        </if>
+    </select>
+
+    <!--店铺类别下的产品-->
+    <select id="businessGoods" resultType="HashMap">
+        select  g.id,g.`name`,g.units,g.spec ,
+        if( -1 = #{binding_id} ,g.temporary_price , IFNULL((select gs.price from shengxian_goods_scheme gs where g.id=gs.goods_id and gs.scheme_id =
+        (select scheme_id from shengxian_binding where is_del = 0 and id= #{binding_id} ) ),0) ) price,
+        (select img from shengxian_goods_img where goods_id=g.id order by id asc limit 1 )img
+        from shengxian_goods g
+        inner join shengxian_goods_category gc on gc.id=g.category_id
+        where g.is_del = 0 and g.status = 2
+        and g.business_id = #{business_id}
+        <if test="binding_id != null and binding_id != -1">
+            and g.id not in (select goods_id from shengxian_goods_shielding where binding_id = #{binding_id} )
+        </if>
+
+        <if test="category_id != null">
+            and g.category_id = #{category_id}
+        </if>
+        <if test="name != null and name != ''">
+            and g.name LIKE CONCAT('%',#{name},'%')
+        </if>
+        <if test="level != null">
+            and gc.level =#{level}
+        </if>
+        order by g.priority desc ,g.id desc limit #{startIndex} ,#{pageSize}
+    </select>
+
+    <!--用户最后登录的商家满减活动-->
+    <select id="buserLastLoginBusinessActivity" resultType="HashMap">
+        select id, `full`,reduce ,startTime,endTime
+        from shengxian_full_reduction
+        where is_del = 0 and   business_id = #{business_id}
+        and endTime &gt;= CURDATE() and startTime &lt;= CURDATE()
+    </select>
+
+    <!--店铺满减活动优惠券-->
+    <select id="businessActivity" resultType="HashMap">
+        select id, `full`,reduce ,startTime,endTime
+        from shengxian_full_reduction
+        where is_del = 0 and   business_id = #{business_id}
+        and endTime &gt;= CURDATE() and startTime &lt;= CURDATE()
+    </select>
+
+    <!--取消绑定-->
+    <update id="cancelBinding">
+        update shengxian_binding set user_id =null  where id=#{id}
+    </update>
+
+    <!--查询注册用户表里最后一次登录的绑定店铺-->
+    <select id="userBDidByBinding_id" resultType="Integer">
+        select id from user where is_del =0 and bd_id = #{binding_id}
+    </select>
+
+    <!--修改最后一次记录登录的店铺ID-->
+    <update id="updateBDIdByUser_id">
+        update user set bd_id = 0 where id= #{id}
+    </update>
+
+    <!---限时秒杀时间段-->
+    <select id="limitedSeckill" resultType="HashMap">
+        select id,startTime,endTime from shengxian_limited_seckill
+        where business_id= (select business_id from shengxian_binding where id=#{binding_id})
+        and (DATE_FORMAT(startTime,'%Y-%m-%d %H:%i') &lt;= DATE_FORMAT(now(),'%Y-%m-%d %H:%i')
+        and DATE_FORMAT(endTime,'%Y-%m-%d %H:%i') &gt;= DATE_FORMAT(now(),'%Y-%m-%d %H:%i')
+        or DATE_FORMAT(startTime,'%Y-%m-%d %H:%i') &lt;= DATE_FORMAT(DATE_ADD(now(),INTERVAL 1 day),'%Y-%m-%d %H:%i')
+        and DATE_FORMAT(endTime,'%Y-%m-%d %H:%i') &gt;= DATE_FORMAT(DATE_ADD(now(),INTERVAL 1 day),'%Y-%m-%d %H:%i') )
+        order by startTime asc
+    </select>
+
+    <!--限时秒杀时间段下的产品总数-->
+    <select id="limitedSeckillGoodsCount" resultType="Integer">
+         select count(sg.id)
+        from shengxian_limited_seckill_goods sg
+        inner join shengxian_goods g on g.id = sg.goods_id and g.status = 2
+        where sg.seckill_id = #{seckill_id} and g.is_del=0
+    </select>
+
+    <!--限时秒杀时间段下的产品-->
+    <select id="limitedSeckillGoods" resultType="HashMap">
+         select sg.goods_id ,g.`name`, g.units,g.spec,g.minimum_price,sg.activity_price,
+        (select img from shengxian_goods_img where goods_id = g.id order by id asc limit 1)img
+        from shengxian_limited_seckill_goods sg
+        inner join shengxian_goods g on g.id = sg.goods_id and g.status = 2
+        where sg.seckill_id =#{seckill_id} and g.is_del=0
+    </select>
+
+    <!--查询手机号是否申请过商家-->
+    <select id="phoneIfRegister" resultType="Integer">
+        select id from shengxian_business where is_del=0 and phone=#{phone}
+    </select>
+
+    <!--//判断邀请码是否存在（包括客户，员工，商家）-->
+    <select id="ifBusinessUserStaffPhone" resultType="Integer">
+        select ifnull(ifnull((select id from user where is_del=0 and phone = #{phone} ),
+        (select id from shengxian_business where is_del =0 and phone =#{phone} )),
+        (select id from shengxian_staff where  phone =#{phone} ))id
+    </select>
+
+    <!--查询最后一条编号-->
+    <select id="selectLastNumber" resultType="String">
+        select number from shengxian_business where is_del= 0  order by id desc limit 1
+    </select>
+
+    <insert id="addBuseinss" keyProperty="id" useGeneratedKeys="true">
+        insert into shengxian_business(number ,phone ,password ,name ,store_name ,token ,invitation ,address ,create_time)
+        values( #{number} ,#{phone} ,#{password} ,#{name} ,#{store_name} ,#{token} ,#{invitation} ,#{address} ,#{create_time})
+    </insert>
+
+    <!--添加商家盘点状态-->
+    <insert id="addClerk">
+        insert into shengxian_business_check(business_id)values(#{business_id})
+    </insert>
+
+    <!--添加模板-->
+    <insert id="addTemplate">
+        insert into shengxian_template
+        (business_id,title,no,originator,name,phone,address,beizhu,serial,goods_name,number,unit_price,money,one,two,three,four,type)
+        values(#{business_id},#{title},#{no},#{originator},#{name},#{phone},#{address},#{beizhu},#{serial},#{goods_name},#{number},#{unit_price},#{money},#{one},#{two},#{three},#{four},#{type})
+    </insert>
+
+    <!--添加模板2-->
+    <insert id="addTemplateTwo">
+        insert into shengxian_template_two( business_id ,title ,type ,one )
+        values ( #{business_id} , #{title} , #{type} ,#{one}  )
+    </insert>
+
+    <!--添加模板3-->
+    <insert id="addTemplateThree">
+        insert into shengxian_template_three( business_id ,title ,type ,one )
+        values ( #{business_id} , #{title} , #{type} ,#{one}  )
+    </insert>
+
+    <!--添加模板5-->
+    <insert id="addTemplateFive">
+        insert into shengxian_template_five( business_id ,title ,type ,one )
+        values ( #{business_id} , #{title} , #{type} ,#{one}  )
+    </insert>
+
+
+    <!--添加商家菜单方案-->
+    <insert id="addBusinessScheme">
+        insert into shengxian_business_scheme(scheme_id,business_id,scheme_name)values(#{scheme_id}, #{bid},#{name})
+    </insert>
+
+    <!--通过店铺满减优惠券id查信息-->
+    <select id="selectCoupon" resultType="HashMap">
+        select full ,reduce ,startTime ,endTime from shengxian_coupon where id=#{id} and type=1
+    </select>
+
+    <!--领取优惠券-->
+    <insert id="addBindingCoupon">
+        insert into shengxian_binding_coupon( binding_id ,coupon_id ,full ,reduce ,startTime ,endTime)
+        values(#{binding_id} ,#{coupon_id} ,#{full},#{reduce} ,#{startTime} ,#{endTime})
+    </insert>
+
+    <!--通过绑定ID查询店铺电话-->
+    <select id="busienssPhone" resultType="String">
+        select telephone  from shengxian_business where is_del = 0
+        and id = (select business_id from shengxian_binding where id = #{binding_id} )
+    </select>
+
+    <select id="businessToken" resultType="String">
+        select token from shengxian_business where id = #{id} and is_del = 0
+    </select>
+
+    <!--通过用户优惠券id修改优惠券使用状态-->
+    <update id="updateUserCouponState">
+        update shengxian_binding_coupon set state = #{state} where id = #{id}
+    </update>
+
+</mapper>    
