@@ -369,6 +369,9 @@ public class OrderServiceImpl implements OrderService {
         for (OrderDetail detail : orderDetail){
             //订单id
             detail.setOrder_id(order.getId());
+            //根据产品id查询产品进价
+            double costPrice = orderMapper.findGoodsCostPrice(detail.getGoods_id());
+            double profit = (detail.getOrder_price() - costPrice) * detail.getOrder_number();
 
             //判断是否有赠送
             if (detail.getActivity()!= 0.0){
@@ -379,12 +382,12 @@ public class OrderServiceImpl implements OrderService {
                 //添加报损记录
                 Give give = new Give(detail.getGoods_id(),Integer.valueOf(info.get("id").toString()),detail.getOrder_number(),new Date(),1,detail.getId());
                 orderMapper.addLossGoods(give);
+                profit =  0 - profit ;
             }
 
-            //根据产品id查询产品进价
-            double costPrice = orderMapper.findGoodsCostPrice(detail.getGoods_id());
+
             //计算每销售一件产品的纯盈利 //用销售价格减去产品进价乘以数量等于纯盈利润
-            detail.setProfit((detail.getOrder_price()-costPrice)*detail.getOrder_number());
+            detail.setProfit(profit);
             detail.setType(0);
             detail.setCost_price(costPrice);
             //添加订单详情
