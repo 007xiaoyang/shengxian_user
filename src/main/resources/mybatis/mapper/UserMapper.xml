@@ -207,7 +207,9 @@
     <select id="userCollectionGoods" resultType="HashMap">
         select gc.id, gc.goods_id, g.name ,g.units,g.spec,
         IFNULL((select gs.price from shengxian_goods_scheme gs where g.id=gs.goods_id and gs.scheme_id =
-        (select scheme_id from shengxian_binding where is_del = 0 and id = #{bd_id} ) ),0)price,
+        (select scheme_id from shengxian_binding where is_del = 0 and id = #{bd_id} ) ),
+        ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = #{business_id} and  o.id = od.order_id and o.is_del = 0
+        and od.goods_id =g.id and o.binding_id = #{bd_id} order by od.id desc limit 1) , 0) )price,
         (select img from shengxian_goods_img where goods_id = gc.goods_id order by id asc limit 1)img
         from shengxian_goods_collection gc
         inner join shengxian_goods g on g.id = gc.goods_id and g.is_del = 0 and g.status = 2
@@ -221,7 +223,9 @@
     <select id="goodsDetali" resultType="HashMap">
           select g.id , g.business_id ,g.name , g.spec , g.units , g.goods_detail,
           if( -1 = #{bd_id} ,g.temporary_price , IFNULL((select gs.price from shengxian_goods_scheme gs where g.id = gs.goods_id and gs.scheme_id =
-          (select scheme_id from shengxian_binding where is_del = 0 and id= #{bd_id} ) ),0)) price
+          (select scheme_id from shengxian_binding where is_del = 0 and id= #{bd_id} ) ),
+          ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = g.business_id and o.id = od.order_id and o.is_del = 0
+          and od.goods_id =g.id and o.binding_id = #{bd_id} order by od.id desc limit 1) , 0))) price
           from shengxian_goods g where is_del= 0 and g.status = 2 and  id = #{goods_id}
     </select>
 
@@ -295,7 +299,9 @@
     <select id="businessGoods" resultType="HashMap">
         select  g.id,g.`name`,g.units,g.spec ,
         if( -1 = #{binding_id} ,g.temporary_price , IFNULL((select gs.price from shengxian_goods_scheme gs where g.id=gs.goods_id and gs.scheme_id =
-        (select scheme_id from shengxian_binding where is_del = 0 and id= #{binding_id} ) ),0) ) price,
+        (select scheme_id from shengxian_binding where is_del = 0 and id= #{binding_id} ) ),
+        ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = #{business_id} and  o.id = od.order_id and o.is_del = 0
+        and od.goods_id =g.id and o.binding_id = #{binding_id} order by od.id desc limit 1) , 0) ) ) price,
         (select img from shengxian_goods_img where goods_id=g.id order by id asc limit 1 )img
         from shengxian_goods g
         inner join shengxian_goods_category gc on gc.id=g.category_id
@@ -379,6 +385,11 @@
     <!--查询手机号是否申请过商家-->
     <select id="phoneIfRegister" resultType="Integer">
         select id from shengxian_business where is_del=0 and phone=#{phone}
+    </select>
+
+    <!--查询手机号是否申请过员工账号-->
+    <select id="phoneIfStaffRegister" resultType="Integer">
+        select id from shengxian_staff where is_del=0 and phone = #{phone}
     </select>
 
     <!--//判断邀请码是否存在（包括客户，员工，商家）-->

@@ -130,7 +130,9 @@
     <select id="shoppingcartGoodsDetail" resultType="HashMap">
         select scd.id, g.name ,g.units ,scd.num,g.id as goods_id,
         ifnull((select gs.price from shengxian_goods_scheme gs where scd.goods_id=gs.goods_id and gs.scheme_id =
-        (select bd.scheme_id from shengxian_binding bd where bd.is_del = 0 and bd.id= #{binding_id} )),0)price,
+        (select bd.scheme_id from shengxian_binding bd where bd.is_del = 0 and bd.id= #{binding_id} )),
+        ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = #{business_id} and  o.id = od.order_id and o.is_del = 0
+        and od.goods_id =g.id and o.binding_id = #{binding_id} order by od.id desc limit 1) , 0))price,
         ifnull((select num from shengxian_restriction_goods where g.id=goods_id),'')restriction,
         (select `full` from shengxian_full_bestow where goods_id = g.id)full,
         (select bestow from shengxian_full_bestow where goods_id = g.id)bestow
@@ -144,7 +146,9 @@
         select scd.id, g.name ,g.units ,scd.num,g.id as goods_id,
         (select img from shengxian_goods_img where goods_id = g.id order by id asc limit 1)img ,
         ifnull((select gs.price from shengxian_goods_scheme gs where scd.goods_id=gs.goods_id and gs.scheme_id =
-        (select bd.scheme_id from shengxian_binding bd where bd.is_del = 0 and bd.id= #{binding_id} )),0)price,
+        (select bd.scheme_id from shengxian_binding bd where bd.is_del = 0 and bd.id= #{binding_id} )),
+        ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = #{business_id} and  o.id = od.order_id and o.is_del = 0
+        and od.goods_id =g.id and o.binding_id = #{binding_id} order by od.id desc limit 1) , 0))price,
         ifnull((select num from shengxian_restriction_goods where g.id=goods_id),'')restriction,
         (select `full` from shengxian_full_bestow where goods_id = g.id)full,
         (select bestow from shengxian_full_bestow where goods_id = g.id)bestow
@@ -157,7 +161,9 @@
     <select id="settlement" resultType="HashMap">
         select scd.id ,g.`name`,g.units,scd.num,scd.goods_id,
         IFNULL((select gs.price from shengxian_goods_scheme gs where g.id=gs.goods_id and gs.scheme_id =
-        (select scheme_id from shengxian_binding where is_del = 0 and id= #{binding_id} ) ),'无会员价格')price,
+        (select scheme_id from shengxian_binding where is_del = 0 and id= #{binding_id} ) ),
+        ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = #{business_id} and o.id = od.order_id and o.is_del = 0
+          and od.goods_id =g.id and o.binding_id = #{binding_id} order by od.id desc limit 1) , 0) )price,
         (select gi.img from shengxian_goods_img gi where scd.goods_id = gi.goods_id order by gi.id asc limit 1) img
         from shengxian_shopping_cart_detail scd
         inner join (select id, units,`name` ,status ,is_del , business_id from shengxian_goods ) g on g.id = scd.goods_id and g.status = 2 and is_del = 0
@@ -289,6 +295,9 @@
         <if test="state != null">
             and o.state = #{state}
         </if>
+        <if test='status != null and status == "5" '>
+            and date_sub(now(),INTERVAL 5 day) &lt;= date(accept_time)
+        </if>
     </select>
 
     <!--订单总数(推送)-->
@@ -300,6 +309,9 @@
         </if>
         <if test="state != null">
             and o.state =#{state}
+        </if>
+        <if test='status != null and status == "5" '>
+            and date_sub(now(),INTERVAL 5 day) &lt;= date(o.accept_time)
         </if>
     </select>
 

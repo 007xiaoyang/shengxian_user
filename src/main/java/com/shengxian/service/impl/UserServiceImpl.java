@@ -526,6 +526,11 @@ public class UserServiceImpl implements UserService {
         if (bid != null){
             throw new NullPointerException("手机号已经注册过了，不能申请了哟");
         }
+        //判断手机号是否注册商家过了
+        Integer staffiId = userMapper.phoneIfStaffRegister(business.getPhone());
+        if (staffiId != null){
+            throw new NullPointerException("手机号已经注册员工账号了，不能申请了哟");
+        }
 
         //判断邀请码是否存在
         if (business.getInvitation() != null && !business.getInvitation().equals("")){
@@ -547,6 +552,7 @@ public class UserServiceImpl implements UserService {
         String pwd = PasswordMD5.EncoderByMd5(123456 + Global.passwordKey);
         business.setToken(UUID.randomUUID().toString());
         business.setCreate_time(new Date());
+        business.setNumber(number);
         //注册商家
         Integer count = userMapper.addBuseinss(business);
 

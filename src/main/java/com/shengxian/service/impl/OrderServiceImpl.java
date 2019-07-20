@@ -169,13 +169,15 @@ public class OrderServiceImpl implements OrderService {
         Integer count = orderMapper.shoppingcartGoodsDetailGoodsCount(hashMap.getSc_id());
         hashMap.setCount(count);
 
+        double tatolMoney = 0;
         //通过购物车id查询购物车下的产品
         List<HashMap> hashMaps = orderMapper.shoppingcartGoodsDetail(hashMap.getSc_id(),binding_id ,hashMap.getBusiness_id());
+        for (HashMap hash: hashMaps ) {
+            tatolMoney += Double.valueOf(hash.get("num").toString()) * Double.valueOf(hash.get("price").toString());
+        }
         hashMap.setGoodsDetail(hashMaps);
 
-
         //查询购物车下所有产品的总金额
-        Double tatolMoney = orderMapper.selectGoodsTatolMoney(shoppingcart_id, binding_id);
         hashMap.setTatolMoney(new BigDecimal(tatolMoney).setScale(2,BigDecimal.ROUND_CEILING));
         return hashMap;
 
@@ -215,20 +217,20 @@ public class OrderServiceImpl implements OrderService {
             orderMapper.deleteShoppingcart(shoppingcart_id);
             hashMap1.setSc_id(0);
         }
+        double tatolMoney = 0;
+        //通过购物车id查询购物车下的产品
+        List<HashMap> hashMaps = orderMapper.shoppingcartDetail(shoppingcart_id,binding_id ,hashMap1.getBusiness_id());
+        for (HashMap hash: hashMaps ) {
+            tatolMoney += Double.valueOf(hash.get("num").toString()) * Double.valueOf(hash.get("price").toString());
+        }
+        //查询购物车下所有产品的总金额
+        hashMap1.setTatolMoney(new BigDecimal(tatolMoney).setScale(2,BigDecimal.ROUND_CEILING));
 
+        hashMap1.setGoodsDetail(hashMaps);
 
         //店铺满减活动
         List<HashMap> activity = userMapper.businessActivity(hashMap1.getBusiness_id());
         hashMap1.setActivity(activity);
-
-        //查询购物车下所有产品的总金额
-        Double tatolMoney = orderMapper.selectGoodsTatolMoney(shoppingcart_id, binding_id);
-        hashMap1.setTatolMoney(new BigDecimal(tatolMoney).setScale(2,BigDecimal.ROUND_CEILING));
-
-        //通过购物车id查询购物车下的产品
-        List<HashMap> hashMaps = orderMapper.shoppingcartDetail(shoppingcart_id,binding_id ,hashMap1.getBusiness_id());
-        hashMap1.setGoodsDetail(hashMaps);
-
         return hashMap1;
     }
 
@@ -250,9 +252,6 @@ public class OrderServiceImpl implements OrderService {
             //结算
             HashMap detail = orderMapper.settlement(Integer.valueOf(id), binding_id ,business_id);
 
-            if (detail.get("price").toString().equals("无会员价格")){
-                throw new NullPointerException("有产品无会员价格，不能结算");
-            }
             tatolMoney += Double.valueOf(detail.get("num").toString()) * Double.valueOf(detail.get("price").toString());
 
             //查询是否是满赠产品

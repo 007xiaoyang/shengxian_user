@@ -105,6 +105,9 @@
         <if test="type != null and type == 4">
             and month(create_time) = month(curdate()) and year( create_time) = year( curdate( ))
         </if>
+        <if test='status != null and status == "5" '>
+            and date_sub(now(),INTERVAL 5 day) &lt;= date(accept_time)
+        </if>
     </select>
 
     <!--我的订单-->
@@ -136,6 +139,9 @@
         </if>
         <if test="type != null and type == 4">
             and month(create_time) = month(curdate()) and year( create_time) = year( curdate( ))
+        </if>
+        <if test='status != null and status == "5" '>
+            and date_sub(now(),INTERVAL 5 day) &lt;= date(accept_time)
         </if>
         order by create_time desc limit #{startIndex} ,#{pageSize}
     </select>
@@ -282,7 +288,9 @@
     <!--店铺推荐产品总数-->
     <select id="businessRecommendGoodsList" resultType="HashMap">
         select rg.goods_id ,g.`name`,g.units ,g.business_id,
-        ifnull((select gs.price from shengxian_goods_scheme gs where g.id=gs.goods_id and gs.scheme_id = #{scheme_id}),0)price,
+        ifnull((select gs.price from shengxian_goods_scheme gs where g.id=gs.goods_id and gs.scheme_id = #{scheme_id}),
+        ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = #{business_id} and o.id = od.order_id and o.is_del = 0
+          and od.goods_id =g.id and o.binding_id = #{binding_id} order by od.id desc limit 1) , 0) )price,
         (select img from shengxian_goods_img where goods_id=g.id order by id asc limit 1)img
         from shengxian_goods g
         inner join shengxian_recommend_goods rg on g.id = rg.goods_id

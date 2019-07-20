@@ -424,6 +424,13 @@ public interface UserMapper {
     Integer phoneIfRegister(@Param("phone") String phone);
 
     /**
+     * 查询手机号是否申请过商家
+     * @param phone
+     * @return
+     */
+    Integer phoneIfStaffRegister(@Param("phone") String phone);
+
+    /**
      * //判断邀请码是否存在（包括客户，员工，商家）
      * @param phone
      * @return
