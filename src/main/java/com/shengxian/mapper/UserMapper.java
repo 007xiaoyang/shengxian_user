@@ -497,6 +497,28 @@ public interface UserMapper {
 
 
     /**
+     * 添加模板4
+     * @param business_id
+     * @param title
+     * @param type
+     * @param one
+     * @return
+     */
+    Integer addTemplateFour( @Param("business_id") Integer business_id,@Param("title") String title ,@Param("type") Integer type ,@Param("one") String one );
+
+
+    /**
+     * 添加模板6
+     * @param business_id
+     * @param title
+     * @param type
+     * @param one
+     * @return
+     */
+    Integer addTemplateSix( @Param("business_id") Integer business_id,@Param("title") String title ,@Param("type") Integer type ,@Param("one") String one );
+
+
+    /**
      * 添加商家菜单方案
      * @param bid
      * @param name

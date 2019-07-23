@@ -439,6 +439,17 @@
         values ( #{business_id} , #{title} , #{type} ,#{one}  )
     </insert>
 
+    <!--添加模板4-->
+    <insert id="addTemplateFour">
+        insert into shengxian_template_four( business_id ,title ,type ,one )
+        values ( #{business_id} , #{title} , #{type} ,#{one}  )
+    </insert>
+
+    <!--添加模板6-->
+    <insert id="addTemplateSix">
+        insert into shengxian_template_six( business_id ,title ,type ,one )
+        values ( #{business_id} , #{title} , #{type} ,#{one}  )
+    </insert>
 
     <!--添加商家菜单方案-->
     <insert id="addBusinessScheme">

@@ -586,6 +586,18 @@ public class UserServiceImpl implements UserService {
         userMapper.addTemplateFive(business.getId() , "销售单" ,2 ,null  );
         userMapper.addTemplateFive(business.getId() , "销售退货单" ,3 ,null  );
 
+        //添加店铺模板4
+        userMapper.addTemplateFour(business.getId() , "采购单" ,0 ,null  );
+        userMapper.addTemplateFour(business.getId() , "采购退货单" ,1 ,null  );
+        userMapper.addTemplateFour(business.getId() , "销售单" ,2 ,null  );
+        userMapper.addTemplateFour(business.getId() , "销售退货单" ,3 ,null  );
+
+        //添加店铺模板6
+        userMapper.addTemplateSix(business.getId() , "采购单" ,0 ,null  );
+        userMapper.addTemplateSix(business.getId() , "采购退货单" ,1 ,null  );
+        userMapper.addTemplateSix(business.getId() , "销售单" ,2 ,null  );
+        userMapper.addTemplateSix(business.getId() , "销售退货单" ,3 ,null  );
+
         //注册商家默认添加15种方案名称
         for (int i = 1;i <16 ; i++){
             userMapper.addBusinessScheme(i,business.getId(),String.valueOf(i));
