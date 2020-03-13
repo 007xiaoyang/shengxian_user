@@ -1,21 +1,21 @@
 package com.shengxian.service.impl;
 
+import com.google.common.collect.Lists;
 import com.shengxian.common.Sendsms;
 import com.shengxian.common.util.*;
 import com.shengxian.entity.*;
 import com.shengxian.mapper.OrderMapper;
 import com.shengxian.mapper.UserMapper;
 import com.shengxian.service.UserService;
-import org.dom4j.util.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.shengxian.vo.BindingInfoVO;
+import com.shengxian.vo.GoodsCategoryVO;
+import com.shengxian.vo.GoodsVO;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Description:
@@ -73,6 +73,7 @@ public class UserServiceImpl implements UserService {
     //快速登录
     @Override
     @Transactional
+    @CacheEvict(cacheNames = {"loginToken" , "token"} , allEntries = true)
     public String fastLogin(String phone)throws NullPointerException ,Exception {
         HashMap user = userMapper.selectUser(phone);
         if (user == null){
@@ -145,6 +146,7 @@ public class UserServiceImpl implements UserService {
     //登录
     @Override
     @Transactional
+    @CacheEvict(cacheNames = {"loginToken" , "token"} , allEntries = true)
     public String login(String phone, String password) throws NullPointerException, Exception {
         HashMap user = userMapper.selectUser(phone);
 
@@ -154,7 +156,7 @@ public class UserServiceImpl implements UserService {
         //密码加密
         String pawd = PasswordMD5.EncoderByMd5(password + Global.passwordKey);
         if (!pawd.equals(user.get("password").toString())){
-            throw new NullPointerException("密码不正确");
+            throw new NullPointerException("手机号码或密码不正确");
         }
         //判断用户是否被禁用户了
         if (user.get("is_disable").toString().equals("1")){
@@ -170,6 +172,13 @@ public class UserServiceImpl implements UserService {
             userMapper.udateUserToken(Integer.valueOf(user.get("id").toString()), token);
         }
         return token;
+    }
+
+    @Override
+    public HashMap getBusinessNameAndImg(String token) {
+        Integer bindingId = userMapper.userBDIdByToken(token);
+
+        return userMapper.getBusinessNameAndImg(bindingId);
     }
 
     //店铺有活动，首次切换弹出活动窗口，关闭下次不用弹出
@@ -329,6 +338,7 @@ public class UserServiceImpl implements UserService {
         return page;
     }
 
+
     //切换商家时修改最后登录的商家
     @Override
     @Transactional
@@ -352,7 +362,7 @@ public class UserServiceImpl implements UserService {
 
     //用户收藏的产品
     @Override
-    public Page userCollectionGoods(String token, Integer pageNo) throws Exception {
+    public Page userCollectionGoods(String token, Integer pageNo ,String name ) throws Exception {
         //通过token查询用户绑定id
         Integer bd_id = userMapper.userBDIdByToken(token);
         int pageNum = 1;
@@ -361,9 +371,9 @@ public class UserServiceImpl implements UserService {
         }
         Integer business_id = userMapper.busienss_id(bd_id);
 
-        Integer totalCount = userMapper.userCollectionGoodsCount(bd_id ,business_id);
+        Integer totalCount = userMapper.userCollectionGoodsCount(bd_id ,business_id ,name);
         Page page = new Page(pageNum,totalCount);
-        List<HashMap> hashMaps = userMapper.userCollectionGoods(bd_id,business_id  ,page.getStartIndex(), page.getPageSize());
+        List<HashMap> hashMaps = userMapper.userCollectionGoods(bd_id,business_id  ,name ,page.getStartIndex(), page.getPageSize());
         page.setRecords(hashMaps);
         return page;
     }
@@ -371,31 +381,27 @@ public class UserServiceImpl implements UserService {
     //通过id查询产品详情
     @Override
     public HashMap goodsDetali(String token ,Integer goods_id) throws NullPointerException, Exception {
-
-        //通过token查询用户绑定id
-        Integer bd_id = -1;
         HashMap hashMap = null;
+        //通过token查询用户绑定id
+        Integer bdId = userMapper.userBDIdByToken(token);
 
-        if (token !=  null && !token.equals("")){
-            bd_id = userMapper.userBDIdByToken(token);
-
-        }
-        hashMap = userMapper.goodsDetali(goods_id, bd_id);
+        hashMap = userMapper.goodsDetali(goods_id, bdId);
         if (hashMap== null){
             throw new NullPointerException("产品不存在");
-        }
-
-        //通过产品ID和绑定客户ID查询产品是否收藏
-        Integer count = userMapper.selectGoodsIsCollection(goods_id, bd_id);
-        if (count == null){
-            hashMap.put("count",0);
-        }else {
-            hashMap.put("count",count);
         }
         //通过产品id查询产品图片
         List<HashMap> hashMaps = userMapper.goodsImg(goods_id);
         hashMap.put("imgs",hashMaps);
         return hashMap;
+    }
+
+    //获取当前的绑定用户是否添加产品到购物车了
+    @Override
+    public HashMap getGoodsIsAddCart(String token, Integer goodsId) {
+        //通过token查询用户绑定id
+        Integer bdId = userMapper.userBDIdByToken(token);
+        return userMapper.getGoodsIsAddCart( goodsId , bdId );
+
     }
 
     //添加收藏
@@ -428,6 +434,60 @@ public class UserServiceImpl implements UserService {
     public List<HashMap> businessCategory(Integer business_id, Integer level) {
         return userMapper.businessCategory(business_id,level);
     }
+    //获取店铺类别集合（小程序）
+    @Override
+    public List<GoodsCategoryVO> getCategroyList(Integer businessId) {
+
+        List<GoodsCategoryVO> vos = new ArrayList<GoodsCategoryVO>();
+        List<GoodsCategoryVO> goodsCategoryList = userMapper.getGoodsCategoryList((long) businessId);
+        GoodsCategoryVO cate = new GoodsCategoryVO();
+        cate.setId(null);
+        cate.setName("全部");
+        vos.add(cate);
+        //遍历所有的菜单分类
+        goodsCategoryList.forEach((category) -> {
+            if(category.getLevel().equals(0) ){
+                vos.add(category);
+            }
+        });
+        //删除根节点
+        goodsCategoryList.removeAll(vos);
+        List<GoodsCategoryVO> gc = new ArrayList<>();
+        gc.addAll(goodsCategoryList);
+
+        //为根菜单设置子菜单，getClild是递归调用的
+        vos.forEach((root) -> {
+            if(root.getId()== null && root.getName().equals("全部")){
+                root.setChildren(gc);
+            }else {
+                /* 获取根节点下的所有子节点 使用getChild方法*/
+                List<GoodsCategoryVO> childList = getCategoryChild(root.getId(), goodsCategoryList );
+                root.setChildren(childList);//给根节点设置子节点
+            }
+        });
+        return vos;
+    }
+    /**
+     * 获取子节点
+     * @param id 父节点id
+     * @param allMenu 所有菜单列表
+     * @return 每个根节点下，所有子菜单列表
+     */
+    public List<GoodsCategoryVO> getCategoryChild(Long id,List<GoodsCategoryVO> allMenu ){
+        //子菜单
+        List<GoodsCategoryVO> childList = Lists.newArrayList();
+        allMenu.forEach((son) -> {
+
+            if( id.equals((long)son.getLevel())){
+                childList.add(son);
+            }
+        });
+        if(childList.size() == 0){
+            return new ArrayList<GoodsCategoryVO>();
+        }
+        allMenu.removeAll(childList);
+        return childList;
+    }
 
     //店铺类别下的产品
     @Override
@@ -459,10 +519,6 @@ public class UserServiceImpl implements UserService {
         Page page = new Page(pageNum,totalCount);
         List<HashMap> hashMaps = userMapper.businessGoods(new Search(business_id,cid,binding_id,name,level,page.getStartIndex(),page.getPageSize()));
         for (HashMap hash: hashMaps ) {
-
-            //根据产品id查询产品是否限购
-            Double restricted = orderMapper.goodsIsRestricted(Integer.valueOf(hash.get("id").toString()));
-            hash.put("restricted" ,restricted) ;
 
             //产品是否满赠
             HashMap hashMap = orderMapper.goodsIsFullGift(Integer.valueOf(hash.get("id").toString()));
@@ -548,8 +604,11 @@ public class UserServiceImpl implements UserService {
         }else {
             number = GroupNumber.getNumber(Integer.valueOf(number));
         }
-
-        String pwd = PasswordMD5.EncoderByMd5(123456 + Global.passwordKey);
+        if(business.getPassword() == null || business.getPassword() == "" ){
+            business.setPassword("123456");
+        }
+        String pwd = PasswordMD5.EncoderByMd5(business.getPassword() + Global.passwordKey);
+        business.setPassword(pwd);
         business.setToken(UUID.randomUUID().toString());
         business.setCreate_time(new Date());
         business.setNumber(number);
@@ -636,5 +695,55 @@ public class UserServiceImpl implements UserService {
             throw new NullPointerException("您还未切换店铺呢");
         }
         return userMapper.busienssPhone(bdid);
+    }
+
+    @Override
+    public BindingInfoVO getAllNeedAttribute(String token, Integer businessId) {
+        Integer bindingId = userMapper.userBDIdByToken(token);
+
+        //通过绑定id查询当前关联的店铺公告和专员
+        BindingInfoVO infoVO = userMapper.getBusinessNoticeAndCommissionerInfoByBindingId(bindingId);
+        if (infoVO == null){
+            infoVO = userMapper.getDefaultBusinessInfo(businessId);
+        }
+        return infoVO;
+    }
+
+    @Override
+    public Page getFullGiftGoodsList(String token, Integer pageNo) {
+        int pageNun = 1;
+        if (pageNo != null && pageNo != 0){
+            pageNun =pageNo;
+        }
+        Integer bindingId = userMapper.userBDIdByToken(token);
+        Scheme s = userMapper.bidAndSchemeid(bindingId);
+        if(s == null){
+            s.setSchemeId(0);
+            s.setBusinessId(0);
+        }
+        Integer totalCount = userMapper.getFullGiftGoodsListCount(bindingId , s.getBusinessId() , s.getSchemeId());
+        Page page = new Page(pageNun,totalCount);
+        List<GoodsVO> fullGiftGoodsList = userMapper.getFullGiftGoodsList(bindingId, s.getBusinessId(), s.getSchemeId(), page.getStartIndex(), page.getPageSize());
+        page.setRecords(fullGiftGoodsList);
+        return page;
+    }
+
+    @Override
+    public Page getRestrictionsGoodsList(String token, Integer pageNo) {
+        int pageNun = 1;
+        if (pageNo != null && pageNo != 0){
+            pageNun =pageNo;
+        }
+        Integer bindingId = userMapper.userBDIdByToken(token);
+        Scheme s = userMapper.bidAndSchemeid(bindingId);
+        if(s == null){
+            s.setSchemeId(0);
+            s.setBusinessId(0);
+        }
+        Integer totalCount = userMapper.getRestrictionsGoodsListCount(bindingId , s.getBusinessId() , s.getSchemeId());
+        Page page = new Page(pageNun,totalCount);
+        List<GoodsVO> restrictionsGoodsList = userMapper.getRestrictionsGoodsList(bindingId, s.getBusinessId(), s.getSchemeId(), page.getStartIndex(), page.getPageSize());
+        page.setRecords(restrictionsGoodsList);
+        return page;
     }
 }

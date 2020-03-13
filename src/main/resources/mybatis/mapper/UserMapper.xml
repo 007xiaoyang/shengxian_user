@@ -75,6 +75,13 @@
         where b.is_del=0 and b.id=#{id}
     </select>
 
+    <select id="getBusinessNameAndImg" resultType="HashMap">
+        select store_name as storeName ,b.img , bd.user_name as userName , bd.id , b.telephone , b.id as businessId , b.notice
+        from shengxian_binding bd
+        inner join shengxian_business b on b.id=bd.business_id  and b.is_del = 0
+        where bd.is_del=0 and  bd.id= #{bindingId}
+    </select>
+
     <!--店铺有活动，首次切换弹出活动窗口，关闭下次不用弹出-->
     <select id="activityIsRead" resultType="HashMap">
         select c.`full`,c.reduce,startTime ,endTime  from shengxian_coupon c
@@ -166,14 +173,18 @@
         limit #{startIndex} ,#{pageSize}
     </select>
 
+    <select id="getBusinessInfoByBid" resultType="HashMap">
+
+    </select>
+
     <!--通过绑定id查询店铺id-->
     <select id="busienss_id" resultType="Integer">
         select business_id from shengxian_binding where is_del=0 and id = #{id}
     </select>
 
     <!--通过绑定id查询店铺id和会员方案-->
-    <select id="bidAndSchemeid" resultType="HashMap">
-        select business_id ,scheme_id from shengxian_binding where is_del=0 and id=#{id}
+    <select id="bidAndSchemeid" resultType="com.shengxian.entity.Scheme">
+        select business_id as businessId ,scheme_id as schemeId from shengxian_binding where is_del=0 and id=#{id}
     </select>
 
     <!--切换商家时修改最后登录的绑定id-->
@@ -201,6 +212,9 @@
         inner join shengxian_goods g on g.id=gc.goods_id and g.is_del =0 and g.status = 2
         where gc.binding_id =#{bd_id} and g.business_id = #{business_id}
         and gc.goods_id not in (select goods_id from shengxian_goods_shielding where binding_id = #{bd_id} )
+        <if test="name != null and name != ''">
+            and g.name LIKE CONCAT('%',#{name},'%')
+        </if>
     </select>
 
     <!--用户收藏的产品-->
@@ -209,24 +223,34 @@
         IFNULL((select gs.price from shengxian_goods_scheme gs where g.id=gs.goods_id and gs.scheme_id =
         (select scheme_id from shengxian_binding where is_del = 0 and id = #{bd_id} ) ),
         ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = #{business_id} and  o.id = od.order_id and o.is_del = 0
-        and od.goods_id =g.id and o.binding_id = #{bd_id} order by od.id desc limit 1) , 0) )price,
+        and od.goods_id =g.id and o.binding_id = #{bd_id} and o.mold = 0  order by od.id desc limit 1) , 0) )price,
         (select img from shengxian_goods_img where goods_id = gc.goods_id order by id asc limit 1)img
         from shengxian_goods_collection gc
         inner join shengxian_goods g on g.id = gc.goods_id and g.is_del = 0 and g.status = 2
         where gc.binding_id = #{bd_id} and g.business_id = #{business_id}
         and gc.goods_id not in (select goods_id from shengxian_goods_shielding where binding_id = #{bd_id} )
+        <if test="name != null and name != ''">
+            and g.name  LIKE CONCAT('%',#{name},'%')
+        </if>
         limit #{startIndex} ,#{pageSize}
     </select>
 
 
     <!--通过id查询产品详情-->
     <select id="goodsDetali" resultType="HashMap">
-          select g.id , g.business_id ,g.name , g.spec , g.units , g.goods_detail,
-          if( -1 = #{bd_id} ,g.temporary_price , IFNULL((select gs.price from shengxian_goods_scheme gs where g.id = gs.goods_id and gs.scheme_id =
-          (select scheme_id from shengxian_binding where is_del = 0 and id= #{bd_id} ) ),
-          ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = g.business_id and o.id = od.order_id and o.is_del = 0
-          and od.goods_id =g.id and o.binding_id = #{bd_id} order by od.id desc limit 1) , 0))) price
-          from shengxian_goods g where is_del= 0 and g.status = 2 and  id = #{goods_id}
+        select g.id , g.business_id ,g.name , g.spec , g.units , g.goods_detail, ifnull(gc.id , 0 ) as count ,
+        if( null = #{bdId} ,g.temporary_price , IFNULL((select gs.price from shengxian_goods_scheme gs where g.id = gs.goods_id and gs.scheme_id =
+        (select scheme_id from shengxian_binding where is_del = 0 and id= #{bdId} ) ),
+         ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o
+         where o.business_id = g.business_id and o.id = od.order_id  and o.mold = 0  and o.is_del = 0 and od.goods_id =g.id and o.binding_id = #{bdId} order by od.id desc limit 1) , 0))) price
+        from shengxian_goods g
+        left join shengxian_goods_collection gc on gc.goods_id = g.id and gc.binding_id = #{bdId}
+        where g.is_del= 0 and g.status = 2 and  g.id = #{id}
+    </select>
+
+    <select id="getGoodsIsAddCart" resultType="HashMap">
+        select cd.id , cd.num  from shengxian_shopping_cart c , shengxian_shopping_cart_detail cd
+        where c.binding_id = #{bdId} and c.id = cd.sc_id and cd.goods_id = #{id}
     </select>
 
     <!--通过产品ID和绑定客户ID查询产品是否收藏-->
@@ -269,6 +293,11 @@
         order by status desc
     </select>
 
+    <select id="getGoodsCategoryList" resultType="com.shengxian.vo.GoodsCategoryVO">
+        select id , name , code , level , status
+        from shengxian_goods_category where business_id = #{businessId} order by  level , status desc
+    </select>
+
     <!--判断是大类别还是小类别-->
     <select id="largeClassOrSmalClass" resultType="Integer">
         select `level` from shengxian_goods_category  where id=#{id}
@@ -297,14 +326,17 @@
 
     <!--店铺类别下的产品-->
     <select id="businessGoods" resultType="HashMap">
-        select  g.id,g.`name`,g.units,g.spec ,
+        select  g.id,g.`name`,g.units,g.spec , (select img from shengxian_goods_img where goods_id=g.id order by id asc limit 1 )img ,
         if( -1 = #{binding_id} ,g.temporary_price , IFNULL((select gs.price from shengxian_goods_scheme gs where g.id=gs.goods_id and gs.scheme_id =
         (select scheme_id from shengxian_binding where is_del = 0 and id= #{binding_id} ) ),
         ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = #{business_id} and  o.id = od.order_id and o.is_del = 0
-        and od.goods_id =g.id and o.binding_id = #{binding_id} order by od.id desc limit 1) , 0) ) ) price,
-        (select img from shengxian_goods_img where goods_id=g.id order by id asc limit 1 )img
+        and od.goods_id =g.id and o.binding_id = #{binding_id}  and o.mold = 0 order by od.id desc limit 1) , 0) ) ) price,
+        rg.num as restricted  , c.id as scdId , c.sc_id as scId , c.num
         from shengxian_goods g
         inner join shengxian_goods_category gc on gc.id=g.category_id
+        left join shengxian_restriction_goods rg on rg.goods_id = g.id  and rg.business_id= #{business_id}
+        left join (select cd.id ,  cd.sc_id ,cd.num ,c.binding_id ,cd.goods_id from shengxian_shopping_cart c , shengxian_shopping_cart_detail cd
+        where  c.binding_id = #{binding_id} and  c.id = cd.sc_id   ) c on  c.binding_id = #{binding_id} and c.goods_id = g.id
         where g.is_del = 0 and g.status = 2
         and g.business_id = #{business_id}
         <if test="binding_id != null and binding_id != -1">
@@ -481,5 +513,69 @@
     <update id="updateUserCouponState">
         update shengxian_binding_coupon set state = #{state} where id = #{id}
     </update>
+
+    <!--通过绑定id查询当前关联的店铺公告和专员-->
+    <select id="getBusinessNoticeAndCommissionerInfoByBindingId" resultType="com.shengxian.vo.BindingInfoVO">
+        select store_name as storeName ,b.img , bd.user_name as userName , bd.id , b.telephone , b.id as businessId , b.notice,
+		s.name as staffName , s.phone as staffPhone
+        from shengxian_binding bd
+        inner join shengxian_business b on b.id = bd.business_id  and b.is_del = 0
+		left join shengxian_staff s on s.id = bd.staff_id and s.is_del = 0
+        where bd.is_del=0 and  bd.id= #{id}
+    </select>
+
+    <!--未登录时默认的店铺信息-->
+    <select id="getDefaultBusinessInfo" resultType="com.shengxian.vo.BindingInfoVO">
+        select id as businessId , notice , telephone ,store_name as storeName
+        from shengxian_business where id = #{id} and is_del = 0
+    </select>
+
+    <select id="getFullGiftGoodsListCount" resultType="Integer">
+        select count(g.id)
+        from shengxian_full_bestow fb
+		inner join shengxian_goods g on g.business_id = #{businessId} and  g.id = fb.goods_id and g.`status`= 2 and g.is_del = 0
+		 and g.id not in (select goods_id from shengxian_goods_shielding where binding_id = #{bindingId} )
+		where fb.business_id = #{businessId}
+    </select>
+    <select id="getFullGiftGoodsList" resultType="com.shengxian.vo.GoodsVO">
+        select g.id,g.`name`,g.units,g.spec , (select img from shengxian_goods_img where goods_id=g.id order by id asc limit 1 )img
+        ,c.id as scdId , c.sc_id as scId , c.num,  fb.full , fb.bestow ,
+        ifnull( (select gs.price from shengxian_goods_scheme gs where g.id=gs.goods_id and gs.scheme_id = #{schemeId}) ,
+        (select od.order_price  from shengxian_order_details od ,shengxian_order o where o.binding_id = #{bindingId}
+        and o.id = od.order_id and   od.goods_id =g.id   and  o.is_del = 0  and o.mold = 0 order by od.id desc limit 1) ) price
+        from shengxian_full_bestow fb
+		inner join shengxian_goods g on g.business_id = #{businessId} and  g.id = fb.goods_id and g.`status`= 2 and g.is_del = 0
+		 and g.id not in (select goods_id from shengxian_goods_shielding where binding_id = #{bindingId} )
+		left join (select cd.id ,  cd.sc_id ,cd.num ,c.binding_id ,cd.goods_id
+		from shengxian_shopping_cart c , shengxian_shopping_cart_detail cd ,shengxian_goods gs
+		where c.binding_id = #{bindingId} and gs.business_id = 1 and gs.id = cd.goods_id  and c.id = cd.sc_id  and gs.is_del = 0 and gs.status = 2)
+		c on  c.binding_id = #{bindingId} and c.goods_id = g.id
+		where fb.business_id = #{businessId}
+		limit #{startIndex} ,#{pageSize}
+    </select>
+
+    <select id="getRestrictionsGoodsListCount" resultType="Integer">
+        select count(g.id)
+        from shengxian_restriction_goods rg
+		inner join shengxian_goods g on g.business_id = #{businessId} and  g.id = rg.goods_id and g.`status`= 2 and g.is_del = 0
+		 and g.id not in (select goods_id from shengxian_goods_shielding where binding_id = #{bindingId} )
+		where rg.business_id = #{businessId}
+    </select>
+    <select id="getRestrictionsGoodsList" resultType="com.shengxian.vo.GoodsVO">
+        select g.id,g.`name`,g.units,g.spec , (select img from shengxian_goods_img where goods_id=g.id order by id asc limit 1 )img
+        ,c.id as scdId , c.sc_id as scId , c.num, rg.num as limitedQuantity ,
+        ifnull( (select gs.price from shengxian_goods_scheme gs where g.id=gs.goods_id and gs.scheme_id = #{schemeId}) ,
+        (select od.order_price  from shengxian_order_details od ,shengxian_order o where o.binding_id = #{bindingId}
+        and o.id = od.order_id and   od.goods_id =g.id   and  o.is_del = 0  and o.mold = 0 order by od.id desc limit 1) ) price
+        from shengxian_restriction_goods rg
+		inner join shengxian_goods g on g.business_id = #{businessId} and  g.id = rg.goods_id and g.`status`= 2 and g.is_del = 0
+		 and g.id not in (select goods_id from shengxian_goods_shielding where binding_id = #{bindingId} )
+		left join (select cd.id ,  cd.sc_id ,cd.num ,c.binding_id ,cd.goods_id
+		from shengxian_shopping_cart c , shengxian_shopping_cart_detail cd ,shengxian_goods gs
+		where c.binding_id = #{bindingId} and gs.business_id = 1 and gs.id = cd.goods_id  and c.id = cd.sc_id  and gs.is_del = 0 and gs.status = 2)
+		c on  c.binding_id = #{bindingId} and c.goods_id = g.id
+		where rg.business_id = #{businessId}
+		limit #{startIndex} ,#{pageSize}
+    </select>
 
 </mapper>    

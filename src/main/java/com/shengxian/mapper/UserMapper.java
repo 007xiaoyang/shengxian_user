@@ -1,8 +1,13 @@
 package com.shengxian.mapper;
 
 import com.shengxian.entity.*;
+import com.shengxian.vo.BindingInfoVO;
+import com.shengxian.vo.GoodsCategoryVO;
+import com.shengxian.vo.GoodsVO;
+import io.swagger.models.auth.In;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -37,6 +42,7 @@ public interface UserMapper {
      * @param token
      * @return
      */
+    @Cacheable(cacheNames = "token")
     HashMap userByToken(@Param("token") String token);
 
     /**
@@ -123,6 +129,8 @@ public interface UserMapper {
      */
     Integer udateUserToken(@Param("id") Integer uid, @Param("token") String token);
 
+
+
     /**
      * 查询店铺状态
      * @param buseinss_id
@@ -130,6 +138,8 @@ public interface UserMapper {
      */
     HashMap findBusinessState(@Param("id") Integer buseinss_id);
 
+
+    HashMap getBusinessNameAndImg(@Param("bindingId") Integer bindingId);
 
     /**
      * 店铺有活动，首次切换弹出活动窗口，关闭下次不用弹出
@@ -231,6 +241,8 @@ public interface UserMapper {
      */
     List<HashMap> userBindingBusiness(@Param("id") Integer id, @Param("startIndex") Integer startIndex, @Param("pageSize") Integer pageSize);
 
+
+
     /**
      * 通过绑定id查询店铺id
      * @param binding_id
@@ -243,7 +255,7 @@ public interface UserMapper {
      * @param binding_id
      * @return
      */
-    HashMap bidAndSchemeid(@Param("id") Integer binding_id);
+    Scheme bidAndSchemeid(@Param("id") Integer binding_id);
 
     /**
      * 切换商家时修改最后登录的绑定id
@@ -257,6 +269,7 @@ public interface UserMapper {
      * @param token
      * @return
      */
+    @Cacheable(cacheNames = "loginToken")
     Integer userBDIdByToken(@Param("token") String token);
 
     /**
@@ -272,7 +285,7 @@ public interface UserMapper {
      * @return
      * @throws Exception
      */
-    Integer userCollectionGoodsCount(@Param("bd_id") Integer bd_id ,@Param("business_id") Integer business_id);
+    Integer userCollectionGoodsCount(@Param("bd_id") Integer bd_id ,@Param("business_id") Integer business_id ,@Param("name") String name);
 
     /**
      * 用户收藏的产品
@@ -280,16 +293,19 @@ public interface UserMapper {
      * @return
      * @throws Exception
      */
-    List<HashMap> userCollectionGoods(@Param("bd_id") Integer bd_id  ,@Param("business_id") Integer business_id, @Param("startIndex") Integer startIndex, @Param("pageSize") Integer pageSize);
+    List<HashMap> userCollectionGoods(@Param("bd_id") Integer bd_id  ,@Param("business_id") Integer business_id ,@Param("name") String name, @Param("startIndex") Integer startIndex, @Param("pageSize") Integer pageSize);
 
     /**
      * 通过id查询产品详情
-     * @param goods_id
-     * @param bd_id
+     * @param goodsId
+     * @param bindingId
      * @return
      * @throws Exception
      */
-    HashMap goodsDetali(@Param("goods_id") Integer goods_id, @Param("bd_id") Integer bd_id);
+    HashMap goodsDetali(@Param("id") Integer goodsId, @Param("bdId") Integer bindingId);
+
+    HashMap getGoodsIsAddCart(@Param("id") Integer goodsId, @Param("bdId") Integer bindingId);
+
 
     /**
      * 通过产品ID和绑定客户ID查询产品是否收藏
@@ -336,6 +352,13 @@ public interface UserMapper {
      * @return
      */
     List<HashMap>  businessCategory(@Param("business_id") Integer business_id, @Param("level") Integer level);
+
+    /**
+     * 查询店铺类别（小程序）
+     * @param businessId
+     * @return
+     */
+    List<GoodsCategoryVO> getGoodsCategoryList(@Param("businessId") Long businessId);
 
     /**
      * 判断是大类别还是小类别
@@ -557,5 +580,30 @@ public interface UserMapper {
      * @return
      */
     Integer updateUserCouponState(@Param("id") Integer coupon_id, @Param("state") Integer state);
+
+
+    /**
+     * 通过绑定id查询当前关联的店铺公告和专员
+     * @param bindingId
+     * @return
+     */
+    BindingInfoVO getBusinessNoticeAndCommissionerInfoByBindingId(@Param("id") Integer bindingId);
+
+
+    /**
+     * 未登录时默认的店铺信息
+     * @param businessId
+     * @return
+     */
+    BindingInfoVO getDefaultBusinessInfo(@Param("id") Integer businessId);
+
+
+    Integer getFullGiftGoodsListCount(@Param("bindingId") Integer bindingId , @Param("businessId") Integer businessId , @Param("schemeId") Integer schemeId );
+
+    List<GoodsVO> getFullGiftGoodsList(@Param("bindingId") Integer bindingId , @Param("businessId") Integer businessId , @Param("schemeId") Integer schemeId , @Param("startIndex") Integer startIndex, @Param("pageSize") Integer pageSize);
+
+    Integer getRestrictionsGoodsListCount(@Param("bindingId") Integer bindingId , @Param("businessId") Integer businessId , @Param("schemeId") Integer schemeId );
+
+    List<GoodsVO> getRestrictionsGoodsList(@Param("bindingId") Integer bindingId , @Param("businessId") Integer businessId , @Param("schemeId") Integer schemeId , @Param("startIndex") Integer startIndex, @Param("pageSize") Integer pageSize);
 
 }

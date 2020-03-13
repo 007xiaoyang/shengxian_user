@@ -1,6 +1,7 @@
 package com.shengxian.mapper;
 
 import com.shengxian.entity.*;
+import com.shengxian.vo.ShoppongCartDetailVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -186,12 +187,25 @@ public interface OrderMapper {
 
 
     /**
+     * 通过购物车id查询购物车下的产品信息(微信小程序）
+     * @param cartId 购物车id
+     * @param bindingId 绑定id
+     * @param businessId 店铺id
+     * @return
+     */
+    List<ShoppongCartDetailVO> getShoppingCartDetail(@Param("cartId") Integer cartId, @Param("bindingId") Integer bindingId  , @Param("businessId") Integer businessId);
+
+
+
+    Integer getCartCount(@Param("bdId") Integer bdId);
+
+    /**
      * 结算
-     * @param scd_id 购物车详情id
+     * @param scdId 购物车详情id
      * @param binding_id 绑定用户id
      * @return
      */
-    HashMap settlement(@Param("scd_id") Integer scd_id, @Param("binding_id") Integer binding_id ,@Param("business_id") Integer business_id);
+    List<HashMap> settlement(@Param("scId") Integer scId, @Param("scdId") String  scdId, @Param("bdId") Integer binding_id ,@Param("bId") Integer business_id);
 
     /**
      * 查询店铺满减活动优惠券
@@ -226,11 +240,21 @@ public interface OrderMapper {
     HashMap userCouponInfoById(@Param("id") Integer id);
 
     /**
-     * 通过绑定id查询店铺运费
-     * @param binding_id
+     * 通过店铺id查询店铺运费
+     * @param businessId
      * @return
      */
-    Double businessFreight(@Param("binding_id") Integer binding_id);
+    Double businessFreight(@Param("businessId") Integer businessId);
+
+    /**
+     * 获取绑定客户符合金额条件的优惠券
+     * @param bindingId
+     * @param money
+     * @return
+     */
+    List<HashMap> getConformConponList(@Param("bindingId") Integer bindingId, @Param("money") Double money);
+
+
 
     /**
      * 通过token查询绑定用户信息和店铺id
@@ -324,6 +348,14 @@ public interface OrderMapper {
      */
     Integer orderListCount(@Param("binding_id") Integer binding_id, @Param("status") String status, @Param("state") Integer state);
 
+    /**
+     * 查询所有状态的推送订单总数 (小程序)-
+     * @param binding_id
+     * @param status
+     * @param state
+     * @return
+     */
+    Integer getOrderPushCount(@Param("id") Integer binding_id, @Param("status") String status, @Param("state") Integer state);
 
     /**
      * 订单总数(推送)

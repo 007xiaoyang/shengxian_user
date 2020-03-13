@@ -2,6 +2,8 @@ package com.shengxian.service;
 
 import com.shengxian.common.util.Page;
 import com.shengxian.entity.Business;
+import com.shengxian.vo.BindingInfoVO;
+import com.shengxian.vo.GoodsCategoryVO;
 
 import java.util.HashMap;
 import java.util.List;
@@ -110,6 +112,13 @@ public interface UserService {
     String login(String phone, String password)throws NullPointerException ,Exception;
 
     /**
+     * 获取店铺名称和图片
+     * @param token
+     * @return
+     */
+    HashMap getBusinessNameAndImg(String token);
+
+    /**
      * 店铺有活动，首次切换弹出活动窗口，关闭下次不用弹出
      * @param token
      * @return
@@ -172,6 +181,8 @@ public interface UserService {
      */
     Page userBindingBusiness(String token, Integer pageNo)throws Exception;
 
+
+
     /**
      * 切换商家时修改最后登录的商家
      * @param token
@@ -186,7 +197,7 @@ public interface UserService {
      * @return
      * @throws Exception
      */
-    Page userCollectionGoods(String token, Integer pageNo)throws Exception;
+    Page userCollectionGoods(String token, Integer pageNo ,String name )throws Exception;
 
     /**
      * 通过id查询产品详情
@@ -195,6 +206,14 @@ public interface UserService {
      * @throws Exception
      */
     HashMap goodsDetali(String token, Integer goods_id)throws NullPointerException, Exception;
+
+    /**
+     * 获取当前的绑定用户是否添加产品到购物车了
+     * @param token
+     * @param goodsId
+     * @return
+     */
+    HashMap getGoodsIsAddCart(String token, Integer goodsId);
 
     /**
      * 添加收藏
@@ -220,6 +239,14 @@ public interface UserService {
      * @return
      */
     List<HashMap>  businessCategory(Integer business_id, Integer level);
+
+
+    /**
+     * 获取店铺类别集合（小程序）
+     * @param businessId
+     * @return
+     */
+    List<GoodsCategoryVO> getCategroyList( Integer businessId);
 
     /**
      * 店铺类别下的产品
@@ -285,4 +312,25 @@ public interface UserService {
      * @return
      */
     String busienssPhone(String token)throws NullPointerException ,Exception;
+
+
+    BindingInfoVO getAllNeedAttribute(String token , Integer businessId);
+
+    /**
+     * 获取店铺满赠商品
+     * @param token
+     * @param pageNo
+     * @return
+     */
+    Page getFullGiftGoodsList(String token , Integer pageNo);
+
+    /**
+     * 获取店铺限购活动商品
+     * @param token
+     * @param pageNo
+     * @return
+     */
+    Page getRestrictionsGoodsList(String token , Integer pageNo);
+
+
 }

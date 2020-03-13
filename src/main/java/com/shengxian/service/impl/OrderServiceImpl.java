@@ -6,6 +6,7 @@ import com.shengxian.entity.*;
 import com.shengxian.mapper.OrderMapper;
 import com.shengxian.mapper.UserMapper;
 import com.shengxian.service.OrderService;
+import com.shengxian.vo.ShoppongCartDetailVO;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,24 +68,24 @@ public class OrderServiceImpl implements OrderService {
             scid = shoppongcart.getId();
         }
         //通过购物车id和产品id查询购物车详情里是否该产品
-        Integer dateil_id = orderMapper.selectShoppingcartDetailIsGoods_id(scid , goods_id); //dateil_id购物车详情id
-        if (dateil_id != null){
+        Integer cdId = orderMapper.selectShoppingcartDetailIsGoods_id(scid , goods_id); //dateil_id购物车详情id
+        if (cdId != null){
 
             //通过购物车详情id修改购买数量
-            orderMapper.updateShoppingcartDetailIsGoods_id(dateil_id,num ,type);
+            orderMapper.updateShoppingcartDetailIsGoods_id(cdId,num ,type);
 
         }else {
 
             //添加购物车详情的产品数量
             ShoppongcartDetail shoppongcartDetail = new ShoppongcartDetail(scid,goods_id,num,new Date());
             orderMapper.addShoppingcartDetailIsGoods_id(shoppongcartDetail);
-            dateil_id = shoppongcartDetail.getId();
+            cdId = shoppongcartDetail.getId();
         }
         //查询该产品是否有限购
         Double restrictedNum = orderMapper.goodsIsRestricted(goods_id);
         if (restrictedNum != null){
             //通过购物车详情ID查询加入购物车的产品数量
-            Double number = orderMapper.selectShoppingcartDetailIsGoods_idNum(dateil_id);
+            Double number = orderMapper.selectShoppingcartDetailIsGoods_idNum(cdId);
             //通过产品id查询购物车里的产品数量
             //判断加入购物车的数量是否大于限购
             if (number > restrictedNum){
@@ -95,7 +96,8 @@ public class OrderServiceImpl implements OrderService {
         //计算店铺加入购物车的总金额
         Double money = orderMapper.selectGoodsTatolMoney( scid, binding_id);
         //修改购物车总金额
-        return orderMapper.updateShoppingcartTotalMoney(scid, money);
+        orderMapper.updateShoppingcartTotalMoney(scid, money);
+        return cdId;
     }
 
     //减掉购物车
@@ -130,6 +132,13 @@ public class OrderServiceImpl implements OrderService {
         Double money = orderMapper.selectGoodsTatolMoney( Integer.valueOf(dateil.get("sc_id").toString()), binding_id);
         //修改购物车总金额
         return orderMapper.updateShoppingcartTotalMoney(Integer.valueOf(dateil.get("sc_id").toString()), money);
+    }
+
+    //删除购物车商品
+    @Override
+    public Integer deleteShoppingCart(Integer id) throws Exception {
+        //删除购物车商品
+        return  orderMapper.deleteShoppingcartDetail(id);
     }
 
     //当前切换店铺的购物车产品
@@ -234,40 +243,62 @@ public class OrderServiceImpl implements OrderService {
         return hashMap1;
     }
 
+    //小程序购物车
+    @Override
+    public ShoppingHashMap wxGetShoppingcart(String token) throws Exception {
+        Integer bindingId = userMapper.userBDIdByToken(token);
+        if (bindingId == null || bindingId == 0){
+            throw new RuntimeException("您还未切换店铺哟");
+        }
+        //查询起送价,店铺id，店铺名称
+        ShoppingHashMap shoppingInfo = orderMapper.findStartingPrice(bindingId);
+
+        //通过绑定id查询购物车id
+        Integer cartId = orderMapper.selectBindingIsShoppingcart(bindingId);
+        //通过购物车id查询购物车下的产品
+        List<ShoppongCartDetailVO> cartDetailInfo = orderMapper.getShoppingCartDetail(cartId , bindingId , shoppingInfo.getBusiness_id());
+        shoppingInfo.setGoodsDetail(cartDetailInfo);
+        //店铺满减活动
+        List<HashMap> activity = userMapper.businessActivity(shoppingInfo.getBusiness_id());
+        shoppingInfo.setActivity(activity);
+        return shoppingInfo;
+    }
+
+    @Override
+    public Integer cartCount(String token) {
+
+        Integer buinessId = userMapper.userBDBusiness_id(token);
+        //通过店铺id判断加入购物车的产品是否被下架了或者是删除了，如果有则直接删除购物车详情里的产品
+        orderMapper.deleteShoppingCartDetailByBusiness_id(buinessId);
+        //通过绑定id查询屏蔽的产品 ,如果有则删除购物车详情里的产品
+        orderMapper.deleteShoppingcartDateilShieldingGoods(buinessId);
+
+        Integer bdId = userMapper.userBDIdByToken(token);
+        //通过绑定id查询购物车总数
+
+        return orderMapper.getCartCount(bdId);
+    }
+
     //结算
     @Override
     @Transactional
     public HashMap settlement(String token, String scd_id ,Integer coupon_id ,Integer business_id) throws NullPointerException, Exception {
-        Integer binding_id = userMapper.userBDIdByToken(token);
-        if (binding_id == null || binding_id.equals(0)){
+        Integer bindingId = userMapper.userBDIdByToken(token);
+        if (bindingId == null || bindingId.equals(0)){
             throw new NullPointerException("您还未切换店铺呢");
         }
-
+        //通过绑定id查询购物车id
+        Integer scId = orderMapper.selectBindingIsShoppingcart(bindingId);
         HashMap hashMap = new HashMap();
         List<HashMap> list = new ArrayList<HashMap>();
         double tatolMoney = 0;
-        String[] scdid = scd_id.split(",");
-        for (String id: scdid  ) {
+        //结算
+        List<HashMap> hashMaps = orderMapper.settlement(scId  , scd_id , bindingId ,business_id);
 
-            //结算
-            HashMap detail = orderMapper.settlement(Integer.valueOf(id), binding_id ,business_id);
-
-            tatolMoney += Double.valueOf(detail.get("num").toString()) * Double.valueOf(detail.get("price").toString());
-
-            //查询是否是满赠产品
-            HashMap hashMap1 = orderMapper.goodsIsFullGift(Integer.valueOf(detail.get("goods_id").toString()));
-            if (hashMap1 != null){
-                if (Double.valueOf(detail.get("num").toString()) >= Double.valueOf(hashMap1.get("full").toString()) ){
-                    detail.put("activity",Double.valueOf(hashMap1.get("bestow").toString()));//赠送数量
-                }else {
-                    detail.put("activity",0);//赠送数量
-                }
-            }else {
-                detail.put("activity",0);//赠送数量
-            }
-            list.add(detail);
+        for (HashMap has: hashMaps  ) {
+            tatolMoney += Double.valueOf(has.get("num").toString()) * Double.valueOf(has.get("price").toString());
         }
-        hashMap.put("detail",list);
+        hashMap.put("detail",hashMaps);
 
         HashMap reduce = null;
 
@@ -297,14 +328,20 @@ public class OrderServiceImpl implements OrderService {
                 hashMap.put("name",reduce.get("name").toString());
                 hashMap.put("reduce",new BigDecimal(Double.valueOf(reduce.get("reduce").toString())).setScale( 2 ,BigDecimal.ROUND_CEILING));
             }
-
         }
-
         //通过绑定id查询店铺运费
-        Double freight = orderMapper.businessFreight(binding_id);
+        Double freight = orderMapper.businessFreight(business_id);
+        hashMap.put("bindingId" , bindingId); //绑定客户id
         hashMap.put("freight",freight);
-        hashMap.put("money",tatolMoney - Double.valueOf(hashMap.get("reduce").toString()) + freight);
+        hashMap.put("money",tatolMoney - Double.valueOf(hashMap.get("reduce").toString()) + freight);//实付总额
+        hashMap.put("tatolMoney" ,tatolMoney); //订单总额
         return hashMap;
+    }
+
+    //获取绑定客户符合金额条件的优惠券
+    @Override
+    public List<HashMap> getConformConponList(Integer bindingId, Double money) {
+        return orderMapper.getConformConponList(bindingId , money);
     }
 
     //下订单
@@ -372,6 +409,17 @@ public class OrderServiceImpl implements OrderService {
             double costPrice = orderMapper.findGoodsCostPrice(detail.getGoods_id());
             double profit = (detail.getOrder_price() - costPrice) * detail.getOrder_number();
 
+
+            //计算每销售一件产品的纯盈利 //用销售价格减去产品进价乘以数量等于纯盈利润
+            detail.setProfit(profit);
+            detail.setType(0);
+            detail.setCost_price(costPrice);
+            //添加订单详情
+            orderMapper.addOrderDateil(detail);
+
+            //根据购物车id和产品id删除购物车详情
+            orderMapper.deteleShoppingCartDetail( scid , detail.getGoods_id());
+
             //判断是否有赠送
             if (detail.getActivity()!= 0.0){
                 detail.setType(1);
@@ -383,17 +431,6 @@ public class OrderServiceImpl implements OrderService {
                 orderMapper.addLossGoods(give);
                 profit =  0 - profit ;
             }
-
-
-            //计算每销售一件产品的纯盈利 //用销售价格减去产品进价乘以数量等于纯盈利润
-            detail.setProfit(profit);
-            detail.setType(0);
-            detail.setCost_price(costPrice);
-            //添加订单详情
-            orderMapper.addOrderDateil(detail);
-
-            //根据购物车id和产品id删除购物车详情
-            orderMapper.deteleShoppingCartDetail( scid , detail.getGoods_id());
 
         }
         //最后判断绑定用户的购物车里是否还有产品
@@ -438,6 +475,54 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return orderMapper.orderListCount(binding_id ,status ,state);
+    }
+
+    //查询所有状态的订单总数
+    @Override
+    public HashMap getOrderStatis(String token) {
+        //获取用户绑定ID
+        Integer bindingId = userMapper.userBDIdByToken(token);
+        HashMap hashMap = new HashMap();
+        //待接单
+        Integer wait = orderMapper.orderListCount(bindingId, "1", null);
+        //待配送和配送中
+        Integer send = orderMapper.orderListCount(bindingId, "2,3", null);
+        //未付款
+        Integer unpaid = orderMapper.orderListCount(bindingId, "4", 0);
+        //欠款
+        Integer arrears = orderMapper.orderListCount(bindingId, "4", 2);
+        //拒单
+        Integer refusal = orderMapper.orderListCount(bindingId, "5", null);
+        hashMap.put("wait" , wait);
+        hashMap.put("send" , send);
+        hashMap.put("unpaid" , unpaid);
+        hashMap.put("arrears" , arrears);
+        hashMap.put("refusal" , refusal);
+        return hashMap;
+    }
+
+
+    @Override
+    public HashMap getOrderPushCount(String token) {
+        //获取用户绑定ID
+        Integer bindingId = userMapper.userBDIdByToken(token);
+        HashMap hashMap = new HashMap();
+        //待接单推送
+        Integer waitPush = orderMapper.getOrderPushCount(bindingId, "1", null);
+        //配送推送
+        Integer sendPush = orderMapper.getOrderPushCount(bindingId, "2,3", null);
+        //未付款推送
+        Integer unpaidPush = orderMapper.getOrderPushCount(bindingId, "4", 0);
+        //欠款推送
+        Integer arrearsPush = orderMapper.getOrderPushCount(bindingId, "4", 2);
+        //拒单推送
+        Integer refusalPush = orderMapper.getOrderPushCount(bindingId, "5", null);
+        hashMap.put("waitPush" , waitPush);
+        hashMap.put("sendPush" , sendPush);
+        hashMap.put("unpaidPush" , unpaidPush);
+        hashMap.put("arrearsPush" , arrearsPush);
+        hashMap.put("refusalPush" , refusalPush);
+        return hashMap;
     }
 
     //订单总数(推送)

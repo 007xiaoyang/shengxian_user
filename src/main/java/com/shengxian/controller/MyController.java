@@ -9,6 +9,7 @@ import com.shengxian.common.util.Page;
 import com.shengxian.entity.Complaints;
 import com.shengxian.entity.SalesService;
 import com.shengxian.service.MyService;
+import io.swagger.models.auth.In;
 import org.apache.log4j.Logger;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -34,6 +35,25 @@ public class MyController {
     @Resource
     private MyService myService;
 
+    /**
+     * 小程序未付款欠款消费
+     * @param token
+     * @return
+     */
+    @RequestMapping("/getUnpaidAndArrearsAndConsumed.do")
+    public Message getUnpaidAndArrearsAndConsumed(String token){
+        Message message = Message.non();
+        try {
+            HashMap hashMap = myService.getUnpaidAndArrearsAndConsumed(token);
+            return message.code(Message.codeSuccessed).data(hashMap).message("获取成功");
+        }catch (NullPointerException e){
+            return message.code(Message.codeFailured).message(e.getMessage());
+        }catch (Exception e){
+            log.error("my/myNUAC"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
+
 
     /**
      * 公告未付款欠款消费
@@ -41,7 +61,7 @@ public class MyController {
      * @return
      */
     @RequestMapping("/myNUAC.do")
-    public Message my(String token){
+    public Message myNUAC(String token){
         Message message = Message.non();
         try {
             HashMap hashMap = myService.myNUAC(token);
@@ -69,6 +89,23 @@ public class MyController {
             return message.code(Message.codeFailured).message(e.getMessage());
         }catch (Exception e){
             log.error("my/businessDateil"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
+
+    /**
+     * 通过店铺id查询店铺详情信息
+     * @param businessId
+     * @return
+     */
+    @RequestMapping("/getBusinessInfoByBid.do")
+    public Message getBusinessInfoByBid(Integer businessId){
+        Message message = Message.non();
+        try {
+            HashMap hashMap = myService.getBusinessInfoByBid(businessId);
+            return message.code(Message.codeSuccessed).data(hashMap).message("获取成功");
+        }catch (Exception e){
+            log.error("user/userBindingBusiness"+e.getMessage());
             return message.code(Message.codeFailured).message(Global.ERROR);
         }
     }
@@ -248,6 +285,22 @@ public class MyController {
         }
     }
 
+    /**
+     * 我的优惠券（分页）小程序
+     * @param token
+     * @return
+     */
+    @RequestMapping("/couponList.do")
+    public Message couponList(String token , Integer pageNo ){
+        Message message = Message.non();
+        try {
+            Page page = myService.couponList(token ,pageNo);
+            return message.code(Message.codeSuccessed).data(page).message("获取成功");
+        }catch (Exception e){
+            log.error("my/myCoupon"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
 
 
     /**
@@ -509,7 +562,7 @@ public class MyController {
      * @param token
      * @return
      */
-    @RequestMapping("/slesService.do")
+        @RequestMapping("/slesService.do")
     @ResponseBody
     public Message slesService(String token,Integer type){
         Message message = Message.non();
@@ -568,6 +621,9 @@ public class MyController {
         }
 
     }
+
+
+
 
 
 }

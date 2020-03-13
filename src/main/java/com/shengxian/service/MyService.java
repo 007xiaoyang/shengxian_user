@@ -17,6 +17,13 @@ public interface MyService {
     HashMap businessDateil(String token);
 
     /**
+     * 通过店铺id查询店铺详情信息
+     * @param bindingId
+     * @return
+     */
+    HashMap getBusinessInfoByBid(Integer bindingId);
+
+    /**
      * 我要投诉
      * @param complaints
      * @return
@@ -36,6 +43,9 @@ public interface MyService {
      * @return
      */
     Integer updateComlaintsState(Integer id)throws Exception;
+
+
+    HashMap getUnpaidAndArrearsAndConsumed(String token) throws Exception;
 
     /**
      * 公告未付款欠款消费
@@ -86,6 +96,8 @@ public interface MyService {
      * @return
      */
     List<HashMap>  myCoupon(String token, Integer business_id)throws NullPointerException ,Exception;
+
+    Page couponList(String token , Integer pageNo);
 
     /**
      * 积分商城

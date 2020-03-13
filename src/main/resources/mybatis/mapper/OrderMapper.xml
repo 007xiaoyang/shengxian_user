@@ -132,7 +132,7 @@
         ifnull((select gs.price from shengxian_goods_scheme gs where scd.goods_id=gs.goods_id and gs.scheme_id =
         (select bd.scheme_id from shengxian_binding bd where bd.is_del = 0 and bd.id= #{binding_id} )),
         ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = #{business_id} and  o.id = od.order_id and o.is_del = 0
-        and od.goods_id =g.id and o.binding_id = #{binding_id} order by od.id desc limit 1) , 0))price,
+        and od.goods_id =g.id and o.binding_id = #{binding_id} and o.mold = 0 order by od.id desc limit 1) , 0))price,
         ifnull((select num from shengxian_restriction_goods where g.id=goods_id),'')restriction,
         (select `full` from shengxian_full_bestow where goods_id = g.id)full,
         (select bestow from shengxian_full_bestow where goods_id = g.id)bestow
@@ -148,7 +148,7 @@
         ifnull((select gs.price from shengxian_goods_scheme gs where scd.goods_id=gs.goods_id and gs.scheme_id =
         (select bd.scheme_id from shengxian_binding bd where bd.is_del = 0 and bd.id= #{binding_id} )),
         ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = #{business_id} and  o.id = od.order_id and o.is_del = 0
-        and od.goods_id =g.id and o.binding_id = #{binding_id} order by od.id desc limit 1) , 0))price,
+        and od.goods_id =g.id and o.binding_id = #{binding_id}  and o.mold = 0  order by od.id desc limit 1) , 0))price,
         ifnull((select num from shengxian_restriction_goods where g.id=goods_id),'')restriction,
         (select `full` from shengxian_full_bestow where goods_id = g.id)full,
         (select bestow from shengxian_full_bestow where goods_id = g.id)bestow
@@ -157,17 +157,42 @@
         where g.is_del= 0 and scd.sc_id= #{sc_id}  and g.business_id = #{business_id}
     </select>
 
+    <!-- 通过购物车id查询购物车下的产品信息（微信小程序）-->
+    <select id="getShoppingCartDetail" resultType="com.shengxian.vo.ShoppongCartDetailVO">
+        select scd.id, g.name ,g.units ,scd.num,g.id as goodsId, g.status ,	fb.full , fb.bestow , rg.num as restriction , gs.id as shielding
+        ,(select img from shengxian_goods_img where goods_id = g.id order by id asc limit 1)img , 'success' as type ,
+        ifnull((select gs.price from shengxian_goods_scheme gs where scd.goods_id=gs.goods_id and gs.scheme_id =
+        (select bd.scheme_id from shengxian_binding bd where bd.is_del = 0 and bd.id= #{bindingId} )),
+        ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = #{businessId} and  o.id = od.order_id and o.is_del = 0
+        and od.goods_id =g.id and o.binding_id = #{bindingId}   and o.mold = 0 order by od.id desc limit 1) , 0))price
+        from shengxian_shopping_cart_detail scd
+        inner join shengxian_goods g on g.id = scd.goods_id
+	    left join shengxian_full_bestow fb on fb.goods_id = g.id
+		left join shengxian_restriction_goods rg on rg .goods_id = g.id and rg.business_id = #{businessId}
+		left join shengxian_goods_shielding gs on gs.goods_id = g.id and gs.binding_id = #{bindingId}
+        where g.is_del= 0 and scd.sc_id= #{cartId}  and g.business_id = #{businessId}
+    </select>
+
+    <!-- 通过购物车id查询购物车下的产品信息（有产品图片）-->
+    <select id="getCartCount" resultType="Integer">
+        select IFNULL(sum(cd.num),0) from shengxian_shopping_cart c
+        inner join shengxian_shopping_cart_detail cd on cd.sc_id = c.id
+        where c.binding_id = #{bdId}
+    </select>
+
     <!--结算-->
     <select id="settlement" resultType="HashMap">
         select scd.id ,g.`name`,g.units,scd.num,scd.goods_id,
         IFNULL((select gs.price from shengxian_goods_scheme gs where g.id=gs.goods_id and gs.scheme_id =
-        (select scheme_id from shengxian_binding where is_del = 0 and id= #{binding_id} ) ),
-        ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = #{business_id} and o.id = od.order_id and o.is_del = 0
-          and od.goods_id =g.id and o.binding_id = #{binding_id} order by od.id desc limit 1) , 0) )price,
+        (select scheme_id from shengxian_binding where is_del = 0 and id= #{bdId} ) ),
+        ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o
+        where o.business_id =#{bId} and o.id = od.order_id and o.is_del = 0 and od.goods_id =g.id and o.binding_id = #{bdId}  and o.mold = 0  order by od.id desc limit 1) , 0) )price,
         (select gi.img from shengxian_goods_img gi where scd.goods_id = gi.goods_id order by gi.id asc limit 1) img
+        , if(scd.num >= fb.full , fb.bestow , 0)activity
         from shengxian_shopping_cart_detail scd
-        inner join (select id, units,`name` ,status ,is_del , business_id from shengxian_goods ) g on g.id = scd.goods_id and g.status = 2 and is_del = 0
-        where scd.id =#{scd_id}  and g.business_id = #{business_id}
+        inner join shengxian_goods g on scd.goods_id = g.id  and g.status = 2 and is_del = 0
+        left join shengxian_full_bestow fb on scd.goods_id = fb.goods_id and fb.goods_id = g.id  and fb.business_id = #{bId}
+        where scd.sc_id = #{scId} and  FIND_IN_SET(scd.id ,#{scdId} ) and g.business_id = #{bId}
     </select>
 
     <!--查询店铺满减活动优惠券-->
@@ -211,7 +236,15 @@
     <!--通过绑定id查询店铺运费-->
     <select id="businessFreight" resultType="Double">
         select ifnull(starting_price,0)freight from shengxian_business
-        where is_del=0 and id = (select business_id from shengxian_binding where is_del=0 and id = #{binding_id})
+        where is_del=0 and id = #{businessId}
+    </select>
+
+
+    <!--获取绑定客户符合金额条件的优惠券-->
+    <select id="getConformConponList" resultType="HashMap">
+        select bc.id , bc.full , bc.reduce ,c.name ,bc.startTime ,bc.endTime from shengxian_binding_coupon bc ,shengxian_coupon c
+        where bc.coupon_id = c.id  and bc.binding_id = #{bindingId}  and bc.state= 0 and bc.full &lt;=  #{money}
+        and bc.endTime &gt;= CURDATE() and bc.startTime &lt;= CURDATE()
     </select>
 
     <!--通过token查询绑定用户信息和店铺id-->
@@ -297,6 +330,21 @@
         </if>
         <if test='status != null and status == "5" '>
             and date_sub(now(),INTERVAL 5 day) &lt;= date(accept_time)
+        </if>
+    </select>
+
+    <!--查询所有状态的推送订单总数 (小程序)-->
+    <select id="getOrderPushCount" resultType="Integer">
+        select count(o.id) from shengxian_order o
+        where o.is_del = 0 and  o.binding_id =#{id} and o.push_state = 0
+        <if test="status != null and status != '' ">
+            and FIND_IN_SET(o.status, #{status})
+        </if>
+        <if test="state != null">
+            and o.state =#{state}
+        </if>
+        <if test='status != null and status == "5" '>
+            and date_sub(now(),INTERVAL 5 day) &lt;= date(o.accept_time)
         </if>
     </select>
 

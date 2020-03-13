@@ -43,6 +43,16 @@ public class MyServiceImpl implements MyService {
         return hashMap;
     }
 
+    @Override
+    public HashMap getBusinessInfoByBid(Integer bindingId) {
+        HashMap hashMap = myMapper.businessDateil(bindingId);
+        if (hashMap != null){
+            List<HashMap> hashMaps = myMapper.businessLicense(Integer.valueOf(hashMap.get("business_id").toString()));
+            hashMap.put("license" ,hashMaps);
+        }
+        return hashMap;
+    }
+
     //我要投诉
     @Override
     @Transactional
@@ -94,6 +104,12 @@ public class MyServiceImpl implements MyService {
     @Transactional
     public Integer updateComlaintsState(Integer id) throws Exception {
         return myMapper.updateComlaintsState(id,new Date());
+    }
+
+    @Override
+    public HashMap getUnpaidAndArrearsAndConsumed(String token) throws Exception {
+        Integer bindingId = userMapper.userBDIdByToken(token);
+        return myMapper.getUnpaidAndArrearsAndConsumed(bindingId);
     }
 
     //公告未付款欠款消费
@@ -172,6 +188,21 @@ public class MyServiceImpl implements MyService {
             throw new NullPointerException("您还未切换店铺呢");
         }
         return  myMapper.myCoupon(binding_id ,business_id);
+    }
+
+    @Override
+    public Page couponList(String token, Integer pageNo) {
+        Integer bindingId = userMapper.userBDIdByToken(token);
+        Integer businessId = userMapper.busienss_id(bindingId);
+        int pageNum = 1;
+        if (pageNo != null && pageNo !=0){
+            pageNum = pageNo;
+        }
+        Integer tatolCount = myMapper.couponListCount(bindingId , businessId);
+        Page page = new Page(pageNum,tatolCount);
+        List<HashMap> hashMaps = myMapper.couponList(bindingId , businessId , page.getStartIndex() , page.getPageSize());
+        page.setRecords(hashMaps);
+        return page;
     }
 
     //积分商城
@@ -291,10 +322,15 @@ public class MyServiceImpl implements MyService {
         }
 
         //通过绑定id查询店铺id和会员方案
-        HashMap hashMap = userMapper.bidAndSchemeid(binding_id);
-        Integer totalCount = myMapper.businessRecommendGoodsListCount(binding_id ,Integer.valueOf(hashMap.get("business_id").toString()) ,Integer.valueOf(hashMap.get("scheme_id").toString()));
+        Scheme scheme = userMapper.bidAndSchemeid(binding_id);
+        if(scheme == null){
+            scheme = new Scheme();
+            scheme.setBusinessId(0);
+            scheme.setSchemeId(0);
+        }
+        Integer totalCount = myMapper.businessRecommendGoodsListCount(binding_id ,scheme.getBusinessId() , scheme.getSchemeId());
         Page page = new Page(pageNum ,totalCount);
-        List<HashMap> hashMaps = myMapper.businessRecommendGoodsList(binding_id,Integer.valueOf(hashMap.get("business_id").toString()) ,Integer.valueOf(hashMap.get("scheme_id").toString()) ,page.getStartIndex() ,page.getPageSize());
+        List<HashMap> hashMaps = myMapper.businessRecommendGoodsList(binding_id ,scheme.getBusinessId() , scheme.getSchemeId() ,page.getStartIndex() ,page.getPageSize());
         page.setRecords(hashMaps);
         return page;
     }

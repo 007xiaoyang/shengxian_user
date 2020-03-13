@@ -30,11 +30,18 @@ public class MyStringMVCConfig extends WebMvcConfigurerAdapter {
                 //修改手机设备,app中判断在是否有退出登录过,在是否有退出登录过,登录 ,首页轮播图
                 .excludePathPatterns("/user/updateEquipment.do" ,"/user/appIsLogin.do" ,"/user/seleteUserStatus.do" ,"/user/login.do","/user/broadcastpicture.do")
                 //系统公告
-                .excludePathPatterns("/user/systemtBulletin.do" ,"/user/find.do")
+                .excludePathPatterns("/user/systemtBulletin.do" ,"/user/find.do" ,"/user/getBusinessNameAndImg.do" ,"/my/getUnpaidAndArrearsAndConsumed.do")
                 //用户收藏的产品 ,用户绑定的商家列表 ,用户最后登录的商家
                 .excludePathPatterns("/user/userCollectionGoods.do" ,"/user/userBindingBusiness.do" ,"/user/userLastLoginBusiness.do")
                 //查询店铺类别 ,店铺类别下的产品
-                .excludePathPatterns("/user/businessCategory.do" ,"/user/businessGoods.do" ,"/user/goodsDetali.do");
+                .excludePathPatterns("/user/businessCategory.do" ,"/user/businessGoods.do" ,"/user/goodsDetali.do" ,"/user/updateUserStatus.do" )
+                .excludePathPatterns("/order/totalCount.do", "/order/cartCount.do" ,"/user/getGoodsIsAddCart.do" , "/order/pushCount.do" , "/order/orderCount.do")
+                .excludePathPatterns("/order/getConformConponList.do" , "/user/businessCategory.do" , "/user/getCategroyList.do" ,"/user/getAllNeedAttribute.do")
+                //通过店铺id查询店铺详情信息
+                //单张图片上传
+                .excludePathPatterns("/fileupload/upload", "/my/getBusinessInfoByBid.do" , "/order/getOrderStatis.do" ,"/order/getOrderPushCount.do")
+                .excludePathPatterns("/user/getFullGiftGoodsList.do" ,"/user/getRestrictionsGoodsList.do");
+
         super.addInterceptors(registry);
     }
 

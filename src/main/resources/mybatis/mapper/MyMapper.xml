@@ -2,6 +2,15 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd"  >
 <mapper namespace="com.shengxian.mapper.MyMapper">
 
+    <select id="getUnpaidAndArrearsAndConsumed" resultType="HashMap">
+        select b.unpaid,c.arrears,d.total  from
+        (select ifnull(sum(o.price) , 0)unpaid from shengxian_order o
+        where o.is_del=0 and o.status=4 and o.state=0 and o.binding_id= #{bindingId} )b,
+        (select ifnull(sum(o.price)-sum(o.money2) , 0)arrears from shengxian_order o
+        where o.is_del=0 and o.status=4 and o.state=2 and o.binding_id= #{bindingId} )c,
+        (select ifnull(sum(o.money) , 0)total from shengxian_order o
+        where o.is_del=0 and o.status=4 and o.state=3 and DATE_FORMAT(o.receivable_time,'%Y-%m-%d') = CURDATE() and o.binding_id= #{bindingId} )d
+    </select>
 
     <!--公告未付款欠款消费-->
     <select id="myNUAC" resultType="HashMap">
@@ -112,7 +121,7 @@
 
     <!--我的订单-->
     <select id="myOrder" resultType="HashMap">
-        select id, order_number,price,status,state,create_time,audit_time,receivable_time,reason ,push_state ,mold ,part
+        select id, order_number,price,status,state,create_time,audit_time,receivable_time,reason ,push_state ,mold ,part , accept_time
         from shengxian_order
         where is_del = 0 and  binding_id = #{binding_id}
         <if test="status != null and status != '' ">
@@ -160,7 +169,7 @@
 
     <!--通过订单id查询订单运费和差价-->
     <select id="orderFreightAndDifferential" resultType="HashMap">
-        select o.freight ,o.difference_price ,o.money ,o.order_number,
+        select o.freight ,o.difference_price ,o.money ,o.order_number, o.price ,
         if( o.coupon_id is null ,0 ,if( o.coupon_id = 0 , (select reduce from shengxian_full_reduction where id = o.activity )
         ,(select reduce from shengxian_binding_coupon where id = o.coupon_id ) ) )coupon
         from shengxian_order o
@@ -192,6 +201,26 @@
         inner join shengxian_coupon c on c.id = bc.coupon_id
         where (bc.binding_id =#{binding_id} or bc.binding_id = 0 ) and c.business_id = #{business_id}
         and bc.state = 0 and bc.endTime &gt;= CURDATE() and bc.startTime &lt;= CURDATE()
+    </select>
+
+    <!--我的优惠券总数-->
+    <select id="couponListCount" resultType="Integer">
+        select count(c.id)
+        from shengxian_binding_coupon bc
+        inner join shengxian_coupon c on c.id = bc.coupon_id
+        where (bc.binding_id =#{bdid} or bc.binding_id = 0 ) and c.business_id = #{bid}
+        and bc.state = 0 and bc.endTime &gt;= CURDATE() and bc.startTime &lt;= CURDATE()
+    </select>
+
+    <!--我的优惠券（分页）-->
+    <select id="couponList" resultType="HashMap">
+        select bc.id,bc.`full`,bc.reduce,bc.startTime,bc.endTime,c.`name`,c.business_id,
+        (select store_name from shengxian_business where c.business_id = id)store_name
+        from shengxian_binding_coupon bc
+        inner join shengxian_coupon c on c.id = bc.coupon_id
+        where (bc.binding_id =#{bdid} or bc.binding_id = 0 ) and c.business_id = #{bid}
+        and bc.state = 0 and bc.endTime &gt;= CURDATE() and bc.startTime &lt;= CURDATE()
+        limit #{startIndex} ,#{pageSize}
     </select>
 
     <!--查询绑定用户积分-->
@@ -290,7 +319,7 @@
         select rg.goods_id ,g.`name`,g.units ,g.business_id,
         ifnull((select gs.price from shengxian_goods_scheme gs where g.id=gs.goods_id and gs.scheme_id = #{scheme_id}),
         ifnull((select od.order_price  from shengxian_order_details od ,shengxian_order o where o.business_id = #{business_id} and o.id = od.order_id and o.is_del = 0
-          and od.goods_id =g.id and o.binding_id = #{binding_id} order by od.id desc limit 1) , 0) )price,
+          and od.goods_id =g.id and o.binding_id = #{binding_id}  and o.mold = 0 order by od.id desc limit 1) , 0) )price,
         (select img from shengxian_goods_img where goods_id=g.id order by id asc limit 1)img
         from shengxian_goods g
         inner join shengxian_recommend_goods rg on g.id = rg.goods_id

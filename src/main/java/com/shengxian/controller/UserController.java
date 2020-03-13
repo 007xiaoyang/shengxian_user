@@ -4,18 +4,17 @@ package com.shengxian.controller;
 import com.alibaba.druid.util.StringUtils;
 import com.alibaba.fastjson.JSONObject;
 import com.shengxian.common.Message;
-import com.shengxian.common.Sendsms;
 import com.shengxian.common.WebSocketUtil;
 import com.shengxian.common.util.Global;
 import com.shengxian.common.util.IntegerUtils;
 import com.shengxian.common.util.Page;
 import com.shengxian.entity.Business;
+import com.shengxian.vo.BindingInfoVO;
+import com.shengxian.vo.GoodsCategoryVO;
 import com.shengxian.service.UserService;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -292,6 +291,26 @@ public class UserController {
             return message.code(Message.codeFailured).message(Global.ERROR);
         }
     }
+    /**
+     * 获取店铺名称和图片
+     * @param token
+     * @return
+     */
+    @RequestMapping("/getBusinessNameAndImg.do")
+    public Message getBusinessNameAndImg(String token){
+        Message message = Message.non();
+
+        try {
+            HashMap hashMap = userService.getBusinessNameAndImg(token);
+            return message.code(Message.codeSuccessed).data(hashMap).message("成功");
+        }catch (NullPointerException e){
+            return message.code(Message.codeFailured).message(e.getMessage());
+        }catch (Exception e){
+            log.error("user/updateUserStatus"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
+
 
 
 
@@ -455,6 +474,7 @@ public class UserController {
     }
 
 
+
     /**
      * 切换商家时修改最后登录的商家
      * @param token
@@ -488,10 +508,10 @@ public class UserController {
      * @return
      */
     @RequestMapping("/userCollectionGoods.do")
-    public Message userCollectionGoods(String token,Integer pageNo){
+    public Message userCollectionGoods(String token,Integer pageNo ,String name ){
         Message message = Message.non();
         try {
-            Page page = userService.userCollectionGoods(token,pageNo);
+            Page page = userService.userCollectionGoods(token,pageNo , name);
             return message.code(Message.codeSuccessed).data(page).message("获取成功");
         }catch (Exception e){
             log.error("user/userCollectionGoods"+e.getMessage());
@@ -500,7 +520,7 @@ public class UserController {
     }
 
     /**
-     * 通过id查询产品详情
+     * 通过id查询产品
      * @param token
      * @param goods_id
      * @return
@@ -521,6 +541,30 @@ public class UserController {
             return message.code(Message.codeFailured).message(Global.ERROR);
         }
     }
+
+    /**
+     * 获取当前的绑定用户是否添加产品到购物车了
+     * @param token
+     * @param goodsId
+     * @return
+     */
+    @RequestMapping("/getGoodsIsAddCart.do")
+    public Message getGoodsIsAddCart(String token ,Integer goodsId){
+        Message message = Message.non();
+        if (IntegerUtils.isEmpty(goodsId) ){
+            return message.code(Message.codeFailured).message("产品id不能为空");
+        }
+        try {
+            HashMap hashMap = userService.getGoodsIsAddCart(token,goodsId);
+            return message.code(Message.codeSuccessed).data(hashMap).message("获取成功");
+        }catch (NullPointerException e){
+            return message.code(Message.codeFailured).message(e.getMessage());
+        }catch (Exception e){
+            log.error("user/getGoodsIsAddCart"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
+
 
     /**
      * 收藏产品
@@ -590,6 +634,24 @@ public class UserController {
             return message.code(Message.codeSuccessed).data(hashMaps).message("获取成功");
         }catch (Exception e){
             log.error("user/businessCategory"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
+
+
+    /**
+     * 获取店铺产品类别（小程序）
+     * @param businessId 店铺id
+     * @return
+     */
+    @RequestMapping("/getCategroyList.do")
+    public Message getCategroyList(Integer businessId){
+        Message message = Message.non();
+        try {
+            List<GoodsCategoryVO> hashMaps = userService.getCategroyList(businessId);
+            return message.code(Message.codeSuccessed).data(hashMaps).message("获取成功");
+        }catch (Exception e){
+            log.error("user/getCategroyList"+e.getMessage());
             return message.code(Message.codeFailured).message(Global.ERROR);
         }
     }
@@ -766,6 +828,62 @@ public class UserController {
         }
     }
 
+    /**
+     *全部商品需要的属性（小程序）
+     * @param token
+     * @return
+     */
+    @RequestMapping("/getAllNeedAttribute.do")
+    public Message getAllNeedAttribute(String token , Integer businessId){
+        Message message = Message.non();
+        try {
+            BindingInfoVO bindingInfoVO = userService.getAllNeedAttribute(token , businessId);
+            return message.code(Message.codeSuccessed).data(bindingInfoVO).message("获取成功");
+        }catch (NullPointerException e){
+            return message.code(Message.codeFailured).message(e.getMessage());
+        }catch (Exception e){
+            log.error("user/busienssPhone"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
+
+    /**
+     * 获取店铺满赠商品
+     * @param token
+     * @return
+     */
+    @RequestMapping("/getFullGiftGoodsList.do")
+    public Message getFullGiftGoodsList(String token, Integer pageNo){
+        Message message = Message.non();
+        try {
+            Page page = userService.getFullGiftGoodsList(token ,pageNo);
+            return message.code(Message.codeSuccessed).data(page).message("获取成功");
+        }catch (NullPointerException e){
+            return message.code(Message.codeFailured).message(e.getMessage());
+        }catch (Exception e){
+            log.error("user/getFullGiftList"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
+
+    /**
+     * 获取店铺限购活动商品
+     * @param token
+     * @return
+     */
+    @RequestMapping("/getRestrictionsGoodsList.do")
+    public Message getRestrictionsGoodsList(String token , Integer pageNo){
+        Message message = Message.non();
+        try {
+            Page page = userService.getRestrictionsGoodsList(token ,pageNo);
+            return message.code(Message.codeSuccessed).data(page).message("获取成功");
+        }catch (NullPointerException e){
+            return message.code(Message.codeFailured).message(e.getMessage());
+        }catch (Exception e){
+            log.error("user/getFullGiftList"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
 
 
 

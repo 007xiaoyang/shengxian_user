@@ -75,6 +75,8 @@ public interface MyMapper {
     Integer updateComlaintsState(@Param("id") Integer id, @Param("create_time") Date create_time);
 
 
+    HashMap getUnpaidAndArrearsAndConsumed(@Param("bindingId") Integer bindingId);
+
     /**
      * 公告未付款欠款消费
      * @param binding_id
@@ -141,6 +143,10 @@ public interface MyMapper {
      * @return
      */
     List<HashMap> myCoupon(@Param("binding_id") Integer binding_id, @Param("business_id") Integer business_id);
+
+    Integer couponListCount(@Param("bdid") Integer bindingId , @Param("bid") Integer businessId );
+
+    List<HashMap> couponList(@Param("bdid") Integer bindingId , @Param("bid") Integer businessId , @Param("startIndex") Integer startIndex, @Param("pageSize") Integer pageSize);
 
     /**
      * 查询绑定用户积分

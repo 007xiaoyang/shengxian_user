@@ -4,6 +4,7 @@ import com.shengxian.common.util.Page;
 import com.shengxian.entity.Address;
 import com.shengxian.entity.Order;
 import com.shengxian.entity.ShoppingHashMap;
+import io.swagger.models.auth.In;
 
 import java.util.HashMap;
 import java.util.List;
@@ -42,6 +43,13 @@ public interface OrderService {
      */
     Integer reduceShoppingCart(String token, Integer dateil_id)throws NullPointerException ,Exception;
 
+    /**
+     * 删除购物车商品
+     * @param id
+     * @return
+     * @throws Exception
+     */
+    Integer deleteShoppingCart(Integer id ) throws Exception;
 
     /**
      * 当前切换店铺的购物车产品
@@ -57,6 +65,21 @@ public interface OrderService {
      */
     ShoppingHashMap shoppingcart(String token)throws NullPointerException ,Exception;
 
+
+
+    /**
+     * 小程序购物车
+     * @param token
+     * @return
+     */
+    ShoppingHashMap wxGetShoppingcart(String token)throws Exception;
+    /**
+     * 获取购物车总数
+     * @param token
+     * @return
+     */
+    Integer cartCount(String token);
+
     /**
      * 结算
      * @param token
@@ -68,6 +91,13 @@ public interface OrderService {
      * @throws Exception
      */
     HashMap settlement(String token, String scd_id, Integer coupon_id, Integer business_id)throws NullPointerException ,Exception;
+
+    /**
+     * 获取绑定客户符合金额条件的优惠券
+     * @param bindingId
+     * @return
+     */
+    List<HashMap> getConformConponList(Integer bindingId ,Double money);
 
     /**
      * 下订单
@@ -97,6 +127,15 @@ public interface OrderService {
      */
     Integer orderListCount(String token, String status, Integer state)throws NullPointerException,Exception;
 
+    /**
+     * 查询所有状态的订单总数
+     */
+    HashMap getOrderStatis(String token );
+
+    /**
+     * 查询所有状态的(推送)订单总数
+     */
+    HashMap getOrderPushCount(String token );
     /**
      * 订单总数(推送)
      * @param token

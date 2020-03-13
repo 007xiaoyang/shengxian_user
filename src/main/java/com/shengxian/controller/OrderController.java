@@ -95,7 +95,7 @@ public class OrderController {
             if (IntegerUtils.isEmpty(count)){
                 return message.code(Message.codeFailured).message("加入购物车失败");
             }
-            return message.code(Message.codeSuccessed).message("加入购物车成功");
+            return message.code(Message.codeSuccessed).data(count).message("加入购物车成功");
         }catch (NullPointerException e){
             return message.code(Message.codeFailured).message(e.getMessage());
         }catch (Exception e){
@@ -125,6 +125,29 @@ public class OrderController {
             return message.code(Message.codeFailured).message(e.getMessage());
         }catch (Exception e){
             log.error("order/reduceShoppingCart"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
+    /**
+     * 删除购物车商品
+     * @param token
+     * @param id 购物车详情id
+     * @return
+     */
+    @RequestMapping("/deleteShoppingCart.do")
+    public Message deleteShoppingCart(String token,Integer id){
+        Message message = Message.non();
+        if (IntegerUtils.isEmpty(id)){
+            return message.code(Message.codeFailured).message("d不能为空");
+        }
+        try {
+            Integer count = orderService.deleteShoppingCart(id );
+            if (IntegerUtils.isEmpty(count)){
+                return message.code(Message.codeFailured).message("删除失败");
+            }
+            return message.code(Message.codeSuccessed).message("删除成功");
+        }catch (Exception e){
+            log.error("order/deleteShoppingCart"+e.getMessage());
             return message.code(Message.codeFailured).message(Global.ERROR);
         }
     }
@@ -167,6 +190,45 @@ public class OrderController {
         }
     }
 
+    /**
+     * 小程序购物车
+     * @param token
+     * @return
+     */
+    @RequestMapping("/wxGetShoppingcart.do")
+    public Message wxGetShoppingcart(String token ){
+        Message message = Message.non();
+        try {
+            ShoppingHashMap hashMap = orderService.wxGetShoppingcart(token);
+            return message.code(Message.codeSuccessed).data(hashMap).message("获取成功");
+        }catch (RuntimeException e){
+            return message.code(Message.codeFailured).message(e.getMessage());
+        }catch (Exception e){
+            log.error("order/wxGetShoppingcart"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
+
+
+
+    /**
+     * 获取购物车总数
+     * @param token
+     * @return
+     */
+    @RequestMapping("/cartCount.do")
+    public Message cartCount(String token ){
+        Message message = Message.non();
+        try {
+            Integer count = orderService.cartCount(token);
+            return message.code(Message.codeSuccessed).data(count).message("获取成功");
+        }catch (NullPointerException e){
+            return message.code(Message.codeFailured).message(e.getMessage());
+        }catch (Exception e){
+            log.error("order/shoppingcart"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
 
     /**
      * 结算
@@ -189,6 +251,22 @@ public class OrderController {
         }
     }
 
+    /**
+     * 获取绑定客户符合金额条件的优惠券
+     * @param bindingId
+     * @return
+     */
+    @RequestMapping("/getConformConponList.do")
+    public Message getConformConponList (Integer bindingId ,Double money){
+        Message message = Message.non();
+        try{
+            List<HashMap> hashMap = orderService.getConformConponList(bindingId , money);
+            return message.code(Message.codeSuccessed).data(hashMap).message("结算成功");
+        }catch (Exception e){
+            log.error("order/getConformConponList"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
 
     /**
      * 下订单
@@ -262,6 +340,44 @@ public class OrderController {
         try {
             Integer count = orderService.orderListCount(token,status,state);
             return message.code(Message.codeSuccessed).data(count).message("获取成功");
+        }catch (NullPointerException e){
+            return message.code(Message.codeFailured).message(e.getMessage());
+        }catch (Exception e){
+            log.error("order/orderListCount"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
+
+    /**
+     * 查询所有状态的订单总数
+     * @param token
+     * @return
+     */
+    @RequestMapping("/getOrderStatis.do")
+    public Message getOrderStatis(String token){
+        Message message = Message.non();
+        try {
+            HashMap hashMap = orderService.getOrderStatis(token);
+            return message.code(Message.codeSuccessed).data(hashMap).message("获取成功");
+        }catch (NullPointerException e){
+            return message.code(Message.codeFailured).message(e.getMessage());
+        }catch (Exception e){
+            log.error("order/orderListCount"+e.getMessage());
+            return message.code(Message.codeFailured).message(Global.ERROR);
+        }
+    }
+
+    /**
+     * 查询所有状态的推送订单总数 (小程序)
+     * @param token
+     * @return
+     */
+    @RequestMapping("/getOrderPushCount.do")
+    public Message getOrderPushCount(String token){
+        Message message = Message.non();
+        try {
+            HashMap hashMap = orderService.getOrderPushCount(token);
+            return message.code(Message.codeSuccessed).data(hashMap).message("获取成功");
         }catch (NullPointerException e){
             return message.code(Message.codeFailured).message(e.getMessage());
         }catch (Exception e){
@@ -488,6 +604,8 @@ public class OrderController {
             return message.code(Message.codeFailured).message(Global.ERROR);
         }
     }
+
+
 
 
 }
