@@ -307,9 +307,18 @@ public class OrderServiceImpl implements OrderService {
             //查询店铺满减活动优惠券
              reduce = orderMapper.businessFullReduction(business_id, tatolMoney);
             if (reduce == null){
-                hashMap.put("conpon_id",0);
-                hashMap.put("name","无");
-                hashMap.put("reduce",0.0);
+                //通过绑定ID查询符合金额的用户优惠券
+                reduce = orderMapper.getAccordWithBindingCoupon(bindingId ,tatolMoney);
+                if(reduce != null ){
+                    hashMap.put("conpon_id",Integer.valueOf(reduce.get("id").toString()));
+                    hashMap.put("name",reduce.get("name").toString());
+                    hashMap.put("reduce",new BigDecimal(Double.valueOf(reduce.get("reduce").toString())).setScale( 2 ,BigDecimal.ROUND_CEILING));
+                }else {
+                    hashMap.put("conpon_id",0);
+                    hashMap.put("name","无");
+                    hashMap.put("reduce",0.0);
+                }
+
             }else {
                 hashMap.put("conpon_id",Integer.valueOf(reduce.get("id").toString()));
                 hashMap.put("name","店铺满减活动");
@@ -348,10 +357,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public Integer addOrder(String token, Order order) throws NullPointerException, Exception {
-        System.out.println("--------------------下订单---------------------");
-
+        //System.out.println("--------------------下订单---------------------");
+        Integer bindingId = userMapper.userBDIdByToken(token);
         //通过token查询绑定用户信息和店铺id
-        HashMap info = orderMapper.bindingidAndBusinessidByToken(token);
+        HashMap info = orderMapper.bindingidAndBusinessidByToken(bindingId);
         if (info == null){
             throw new NullPointerException("登录失效");
         }

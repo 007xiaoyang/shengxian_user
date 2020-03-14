@@ -382,22 +382,28 @@ public class MyServiceImpl implements MyService {
     //积分兑换
     @Override
     @Transactional
-    public Integer addExchangeIntegraGoods(String token, Integer goods_id, Double integra) throws NullPointerException, Exception {
+    public Integer addExchangeIntegraGoods(String token, Integer goods_id, Double integra) throws  Exception {
 
         //通过产品id查询是否下架了
         Integer status = myMapper.selectIntegraGoodsIdStatus(goods_id);
         if (status == null){
-            throw new NullPointerException("产品已经下架了");
+            throw new RuntimeException("产品已经下架了");
         }
 
         //通过积分产品id查询产品剩余库存
         Double num = myMapper.selectIntegraGoodNum(goods_id);
         if (num  == null || num <= 0.0 ){
-            throw new NullPointerException("抱歉 ，您兑换的产品库存已经没有了");
+            throw new RuntimeException("抱歉 ，您兑换的产品库存已经没有了");
         }
 
         //客户绑定ID
         Integer binding_id = userMapper.userBDIdByToken(token);
+
+        //通过绑定id查询积分总数
+        Double integarNum = myMapper.getBindingIntegarNum(binding_id);
+        if(integarNum < integra){
+            throw new RuntimeException("抱歉 ，您的积分不足于兑换该商品");
+        }
         Integer business_id = userMapper.busienss_id(binding_id);
         String number = OrderCodeFactory.getOnlineOrderCode((long) 0, 5);
 
@@ -406,7 +412,7 @@ public class MyServiceImpl implements MyService {
         //通过绑定用户id查询积分id
         Integer integraId = myMapper.selectIntegraId(binding_id);
         if (integraId == null ){
-            throw new NullPointerException("用户注册失败，丢失用户积分id");
+            throw new RuntimeException("用户注册失败，丢失用户积分id");
         }
 
         //兑换产品订单

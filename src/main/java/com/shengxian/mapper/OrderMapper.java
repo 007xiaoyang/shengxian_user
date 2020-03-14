@@ -216,6 +216,13 @@ public interface OrderMapper {
     HashMap businessFullReduction(@Param("business_id") Integer business_id, @Param("money") Double money);
 
     /**
+     * 通过绑定id查询符合金额的优惠券
+     * @param bindingId 用户绑定ID
+     * @param money     消费金额
+     * @return
+     */
+    HashMap getAccordWithBindingCoupon(@Param("bindingId") Integer bindingId, @Param("money") Double money);
+    /**
      * 通过用户优惠券ID查询符合金额的优惠券
      * @param coupon_id 用户优惠券ID
      * @param money     消费金额
@@ -258,10 +265,10 @@ public interface OrderMapper {
 
     /**
      * 通过token查询绑定用户信息和店铺id
-     * @param token
+     * @param bindingId
      * @return
      */
-    HashMap bindingidAndBusinessidByToken(String token);
+    HashMap bindingidAndBusinessidByToken(@Param("bindingId") Integer bindingId);
 
     /**
      * 查询绑定用户的信用额度

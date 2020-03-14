@@ -179,6 +179,12 @@ public interface MyMapper {
     HashMap integraGoodsById(@Param("id") Integer goods_id);
 
     /**
+     * 通过绑定id查询积分总数
+     * @param binding_id
+     * @return
+     */
+    Double getBindingIntegarNum(@Param("bindingId") Integer binding_id);
+    /**
      * 通过绑定用户id查询积分id
      * @param binding_id
      * @return

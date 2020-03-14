@@ -186,7 +186,7 @@ public interface MyService {
      * @return
      * @throws Exception
      */
-    Integer addExchangeIntegraGoods(String token, Integer goods_id, Double integra)throws NullPointerException , Exception;
+    Integer addExchangeIntegraGoods(String token, Integer goods_id, Double integra)throws  Exception;
 
 
     /**

@@ -202,6 +202,14 @@
         and endTime &gt;= CURDATE() and startTime &lt;= CURDATE() order by full desc limit 1
     </select>
 
+    <!--通过绑定id查询符合金额的优惠券-->
+    <select id="getAccordWithBindingCoupon" resultType="HashMap">
+        select bc.id , bc.reduce ,c.name from shengxian_binding_coupon bc ,shengxian_coupon c
+        where bc.coupon_id = c.id  and bc.binding_id = #{bindingId} and bc.full &lt;=  #{money} and bc.state = 0
+        and bc.endTime &gt;= CURDATE() and bc.startTime &lt;= CURDATE() order by bc.full desc limit 1
+    </select>
+
+
     <!--通过用户优惠券ID查询符合金额的优惠券-->
     <select id="accordMoneyCouponByCoupon_id" resultType="HashMap">
         select bc.id , bc.reduce ,c.name from shengxian_binding_coupon bc ,shengxian_coupon c
@@ -251,19 +259,19 @@
     <select id="bindingidAndBusinessidByToken" resultType="HashMap">
         select bd.id , bd.business_id ,credit ,limited ,staff_id
         from shengxian_binding bd where is_del = 0 and
-        bd.id = (select bd_id from user u where is_del=0 and token= #{token} )
+        bd.id = #{bindingId}
     </select>
 
     <!--查询绑定用户的信用额度-->
     <select id="bindingCredit" resultType="Integer">
-        select id from shengxian_binding  where is_del=0 and id= #{id} and credit >
+        select id from shengxian_binding  where is_del=0 and id= #{id} and credit &lt;
         ((select ifnull(sum(price),0) from shengxian_order where is_del=0 and binding_id = #{id} and `status`=4 and state=0 )
-        +(select ifnull(sum(money),0) from shengxian_order where is_del=0 and binding_id = #{id}  and `status`=4 and state=2 ))
+        +(select ifnull(sum(price)-sum(money2) ,0) from shengxian_order where is_del=0 and binding_id = #{id}  and `status`=4 and state=2 ))
     </select>
 
     <!--查询绑定用户的限制天数-->
     <select id="bindingLimited" resultType="Integer">
-        select id from shengxian_binding  where is_del=0 and id = #{id} and limited >
+        select id from shengxian_binding  where is_del=0 and id = #{id} and limited &lt;
         (select DATEDIFF(CURDATE(),DATE_FORMAT(audit_time,'%Y-%m-%d'))
         from shengxian_order where is_del=0 and binding_id= #{id} and
         `status`=4 and state in (0,2) order by DATE_FORMAT(audit_time,'%Y-%m-%d') asc limit 1  )

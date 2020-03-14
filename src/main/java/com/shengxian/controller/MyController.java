@@ -505,7 +505,7 @@ public class MyController {
                 return message.code(Message.codeFailured).message("兑换失败");
             }
             return message.code(Message.codeSuccessed).message("兑换成功");
-        }catch (NullPointerException e){
+        }catch (RuntimeException e){
             return  message.code(Message.codeFailured).message(e.getMessage());
         }catch (Exception e){
             log.error("my/addExchangeIntegraGoods"+e.getMessage());

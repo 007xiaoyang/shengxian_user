@@ -181,7 +181,7 @@
         select od.id ,od.order_number ,od.order_price , od.type ,g.name ,g.units ,g.spec
         , (select img from shengxian_goods_img gi where gi.goods_id = od.goods_id order by gi.id asc limit 1) img
         from shengxian_order_details od
-        left join shengxian_goods g on g.id = od.goods_id and g.is_del = 0
+        left join shengxian_goods g on g.id = od.goods_id
         where    od.order_id = #{id}
     </select>
 
@@ -246,6 +246,12 @@
          select id ,img ,name ,spec ,units,integr_price ,goods_detail  from shengxian_integr_goods
           where is_del = 0 and status = 2 and id = #{id}
     </select>
+
+    <!--通过绑定id查询积分id-->
+    <select id="getBindingIntegarNum" resultType="Double">
+        select integar_num from shengxian_binding_integra where binding_id = #{bindingId}
+    </select>
+
 
     <!--通过绑定id查询积分id-->
     <select id="selectIntegraId" resultType="Integer">
